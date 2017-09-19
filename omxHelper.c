@@ -31,19 +31,19 @@ const char *omxImageCodingTypeEnum(OMX_IMAGE_CODINGTYPE eCompressionFormat) {
     static char unknown[32];
 
     switch (eCompressionFormat) {
-        case OMX_IMAGE_CodingUnused:     return "OMX_IMAGE_CodingUnused";
-        case OMX_IMAGE_CodingAutoDetect: return "OMX_IMAGE_CodingAutoDetect";
-        case OMX_IMAGE_CodingJPEG:       return "OMX_IMAGE_CodingJPEG";
-        case OMX_IMAGE_CodingJPEG2K:     return "OMX_IMAGE_CodingJPEG2K";
-        case OMX_IMAGE_CodingEXIF:       return "OMX_IMAGE_CodingEXIF";
-        case OMX_IMAGE_CodingTIFF:       return "OMX_IMAGE_CodingTIFF";
-        case OMX_IMAGE_CodingGIF:        return "OMX_IMAGE_CodingGIF";
-        case OMX_IMAGE_CodingPNG:        return "OMX_IMAGE_CodingPNG";
-        case OMX_IMAGE_CodingLZW:        return "OMX_IMAGE_CodingLZW";
-        case OMX_IMAGE_CodingBMP:        return "OMX_IMAGE_CodingBMP";
+        case CASE_STRING(OMX_IMAGE_CodingUnused);
+        case CASE_STRING(OMX_IMAGE_CodingAutoDetect);
+        case CASE_STRING(OMX_IMAGE_CodingJPEG);
+        case CASE_STRING(OMX_IMAGE_CodingJPEG2K);
+        case CASE_STRING(OMX_IMAGE_CodingEXIF);
+        case CASE_STRING(OMX_IMAGE_CodingTIFF);
+        case CASE_STRING(OMX_IMAGE_CodingGIF);
+        case CASE_STRING(OMX_IMAGE_CodingPNG);
+        case CASE_STRING(OMX_IMAGE_CodingLZW);
+        case CASE_STRING(OMX_IMAGE_CodingBMP);
 
-        case OMX_IMAGE_CodingTGA:        return "OMX_IMAGE_CodingTGA";
-        case OMX_IMAGE_CodingPPM:        return "OMX_IMAGE_CodingPPM";
+        case CASE_STRING(OMX_IMAGE_CodingTGA);
+        case CASE_STRING(OMX_IMAGE_CodingPPM);
 
         default: {
             snprintf(unknown, sizeof(unknown), "OMX_IMAGE_CODINGTYPE 0x%08x", eCompressionFormat);
@@ -58,62 +58,62 @@ const char *omxColorFormatTypeEnum(OMX_COLOR_FORMATTYPE eColorFormat) {
     static char unknown[32];
 
     switch (eColorFormat) {
-        case OMX_COLOR_FormatUnused:                 return "OMX_COLOR_FormatUnused";
-        case OMX_COLOR_FormatMonochrome:             return "OMX_COLOR_FormatMonochrome";
-        case OMX_COLOR_Format8bitRGB332:             return "OMX_COLOR_Format8bitRGB332";
-        case OMX_COLOR_Format12bitRGB444:            return "OMX_COLOR_Format12bitRGB444";
-        case OMX_COLOR_Format16bitARGB4444:          return "OMX_COLOR_Format16bitARGB4444";
-        case OMX_COLOR_Format16bitARGB1555:          return "OMX_COLOR_Format16bitARGB1555";
-        case OMX_COLOR_Format16bitRGB565:            return "OMX_COLOR_Format16bitRGB565";
-        case OMX_COLOR_Format16bitBGR565:            return "OMX_COLOR_Format16bitBGR565";
-        case OMX_COLOR_Format18bitRGB666:            return "OMX_COLOR_Format18bitRGB666";
-        case OMX_COLOR_Format18bitARGB1665:          return "OMX_COLOR_Format18bitARGB1665";
-        case OMX_COLOR_Format19bitARGB1666:          return "OMX_COLOR_Format19bitARGB1666 ";
-        case OMX_COLOR_Format24bitRGB888:            return "OMX_COLOR_Format24bitRGB888";
-        case OMX_COLOR_Format24bitBGR888:            return "OMX_COLOR_Format24bitBGR888";
-        case OMX_COLOR_Format24bitARGB1887:          return "OMX_COLOR_Format24bitARGB1887";
-        case OMX_COLOR_Format25bitARGB1888:          return "OMX_COLOR_Format25bitARGB1888";
-        case OMX_COLOR_Format32bitBGRA8888:          return "OMX_COLOR_Format32bitBGRA8888";
-        case OMX_COLOR_Format32bitARGB8888:          return "OMX_COLOR_Format32bitARGB8888";
-        case OMX_COLOR_FormatYUV411Planar:           return "OMX_COLOR_FormatYUV411Planar";
-        case OMX_COLOR_FormatYUV411PackedPlanar:     return "OMX_COLOR_FormatYUV411PackedPlanar";
-        case OMX_COLOR_FormatYUV420Planar:           return "OMX_COLOR_FormatYUV420Planar";
-        case OMX_COLOR_FormatYUV420PackedPlanar:     return "OMX_COLOR_FormatYUV420PackedPlanar";
-        case OMX_COLOR_FormatYUV420SemiPlanar:       return "OMX_COLOR_FormatYUV420SemiPlanar";
-        case OMX_COLOR_FormatYUV422Planar:           return "OMX_COLOR_FormatYUV422Planar";
-        case OMX_COLOR_FormatYUV422PackedPlanar:     return "OMX_COLOR_FormatYUV422PackedPlanar";
-        case OMX_COLOR_FormatYUV422SemiPlanar:       return "OMX_COLOR_FormatYUV422SemiPlanar";
-        case OMX_COLOR_FormatYCbYCr:                 return "OMX_COLOR_FormatYCbYCr";
-        case OMX_COLOR_FormatYCrYCb:                 return "OMX_COLOR_FormatYCrYCb";
-        case OMX_COLOR_FormatCbYCrY:                 return "OMX_COLOR_FormatCbYCrY";
-        case OMX_COLOR_FormatCrYCbY:                 return "OMX_COLOR_FormatCrYCbY";
-        case OMX_COLOR_FormatYUV444Interleaved:      return "OMX_COLOR_FormatYUV444Interleaved";
-        case OMX_COLOR_FormatRawBayer8bit:           return "OMX_COLOR_FormatRawBayer8bit";
-        case OMX_COLOR_FormatRawBayer10bit:          return "OMX_COLOR_FormatRawBayer10bit";
-        case OMX_COLOR_FormatRawBayer8bitcompressed: return "OMX_COLOR_FormatRawBayer8bitcompressed";
-        case OMX_COLOR_FormatL2:                     return "OMX_COLOR_FormatL2 ";
-        case OMX_COLOR_FormatL4:                     return "OMX_COLOR_FormatL4 ";
-        case OMX_COLOR_FormatL8:                     return "OMX_COLOR_FormatL8 ";
-        case OMX_COLOR_FormatL16:                    return "OMX_COLOR_FormatL16 ";
-        case OMX_COLOR_FormatL24:                    return "OMX_COLOR_FormatL24 ";
-        case OMX_COLOR_FormatL32:                    return "OMX_COLOR_FormatL32";
-        case OMX_COLOR_FormatYUV420PackedSemiPlanar: return "OMX_COLOR_FormatYUV420PackedSemiPlanar";
-        case OMX_COLOR_FormatYUV422PackedSemiPlanar: return "OMX_COLOR_FormatYUV422PackedSemiPlanar";
-        case OMX_COLOR_Format18BitBGR666:            return "OMX_COLOR_Format18BitBGR666";
-        case OMX_COLOR_Format24BitARGB6666:          return "OMX_COLOR_Format24BitARGB6666";
-        case OMX_COLOR_Format24BitABGR6666:          return "OMX_COLOR_Format24BitABGR6666";
+        case CASE_STRING(OMX_COLOR_FormatUnused);
+        case CASE_STRING(OMX_COLOR_FormatMonochrome);
+        case CASE_STRING(OMX_COLOR_Format8bitRGB332);
+        case CASE_STRING(OMX_COLOR_Format12bitRGB444);
+        case CASE_STRING(OMX_COLOR_Format16bitARGB4444);
+        case CASE_STRING(OMX_COLOR_Format16bitARGB1555);
+        case CASE_STRING(OMX_COLOR_Format16bitRGB565);
+        case CASE_STRING(OMX_COLOR_Format16bitBGR565);
+        case CASE_STRING(OMX_COLOR_Format18bitRGB666);
+        case CASE_STRING(OMX_COLOR_Format18bitARGB1665);
+        case CASE_STRING(OMX_COLOR_Format19bitARGB1666);
+        case CASE_STRING(OMX_COLOR_Format24bitRGB888);
+        case CASE_STRING(OMX_COLOR_Format24bitBGR888);
+        case CASE_STRING(OMX_COLOR_Format24bitARGB1887);
+        case CASE_STRING(OMX_COLOR_Format25bitARGB1888);
+        case CASE_STRING(OMX_COLOR_Format32bitBGRA8888);
+        case CASE_STRING(OMX_COLOR_Format32bitARGB8888);
+        case CASE_STRING(OMX_COLOR_FormatYUV411Planar);
+        case CASE_STRING(OMX_COLOR_FormatYUV411PackedPlanar);
+        case CASE_STRING(OMX_COLOR_FormatYUV420Planar);
+        case CASE_STRING(OMX_COLOR_FormatYUV420PackedPlanar);
+        case CASE_STRING(OMX_COLOR_FormatYUV420SemiPlanar);
+        case CASE_STRING(OMX_COLOR_FormatYUV422Planar);
+        case CASE_STRING(OMX_COLOR_FormatYUV422PackedPlanar);
+        case CASE_STRING(OMX_COLOR_FormatYUV422SemiPlanar);
+        case CASE_STRING(OMX_COLOR_FormatYCbYCr);
+        case CASE_STRING(OMX_COLOR_FormatYCrYCb);
+        case CASE_STRING(OMX_COLOR_FormatCbYCrY);
+        case CASE_STRING(OMX_COLOR_FormatCrYCbY);
+        case CASE_STRING(OMX_COLOR_FormatYUV444Interleaved);
+        case CASE_STRING(OMX_COLOR_FormatRawBayer8bit);
+        case CASE_STRING(OMX_COLOR_FormatRawBayer10bit);
+        case CASE_STRING(OMX_COLOR_FormatRawBayer8bitcompressed);
+        case CASE_STRING(OMX_COLOR_FormatL2);
+        case CASE_STRING(OMX_COLOR_FormatL4);
+        case CASE_STRING(OMX_COLOR_FormatL8);
+        case CASE_STRING(OMX_COLOR_FormatL16);
+        case CASE_STRING(OMX_COLOR_FormatL24);
+        case CASE_STRING(OMX_COLOR_FormatL32);
+        case CASE_STRING(OMX_COLOR_FormatYUV420PackedSemiPlanar);
+        case CASE_STRING(OMX_COLOR_FormatYUV422PackedSemiPlanar);
+        case CASE_STRING(OMX_COLOR_Format18BitBGR666);
+        case CASE_STRING(OMX_COLOR_Format24BitARGB6666);
+        case CASE_STRING(OMX_COLOR_Format24BitABGR6666);
 
-        case OMX_COLOR_Format32bitABGR8888:          return "OMX_COLOR_Format32bitABGR8888";
-        case OMX_COLOR_Format8bitPalette:            return "OMX_COLOR_Format8bitPalette";
-        case OMX_COLOR_FormatYUVUV128:               return "OMX_COLOR_FormatYUVUV128";
-        case OMX_COLOR_FormatRawBayer12bit:          return "OMX_COLOR_FormatRawBayer12bit";
-        case OMX_COLOR_FormatBRCMEGL:                return "OMX_COLOR_FormatBRCMEGL";
-        case OMX_COLOR_FormatBRCMOpaque:             return "OMX_COLOR_FormatBRCMOpaque";
-        case OMX_COLOR_FormatYVU420PackedPlanar:     return "OMX_COLOR_FormatYVU420PackedPlanar";
-        case OMX_COLOR_FormatYVU420PackedSemiPlanar: return "OMX_COLOR_FormatYVU420PackedSemiPlanar";
-        case OMX_COLOR_FormatRawBayer16bit:          return "OMX_COLOR_FormatRawBayer16bit";
-        case OMX_COLOR_FormatYUV420_16PackedPlanar:  return "OMX_COLOR_FormatYUV420_16PackedPlanar";
-        case OMX_COLOR_FormatYUVUV64_16:             return "OMX_COLOR_FormatYUVUV64_16";
+        case CASE_STRING(OMX_COLOR_Format32bitABGR8888);
+        case CASE_STRING(OMX_COLOR_Format8bitPalette);
+        case CASE_STRING(OMX_COLOR_FormatYUVUV128);
+        case CASE_STRING(OMX_COLOR_FormatRawBayer12bit);
+        case CASE_STRING(OMX_COLOR_FormatBRCMEGL);
+        case CASE_STRING(OMX_COLOR_FormatBRCMOpaque); 
+        case CASE_STRING(OMX_COLOR_FormatYVU420PackedPlanar); 
+        case CASE_STRING(OMX_COLOR_FormatYVU420PackedSemiPlanar);
+        case CASE_STRING(OMX_COLOR_FormatRawBayer16bit); 
+        case CASE_STRING(OMX_COLOR_FormatYUV420_16PackedPlanar); 
+        case CASE_STRING(OMX_COLOR_FormatYUVUV64_16);
         default: {
             snprintf(unknown, sizeof(unknown), "OMX_COLOR_FORMATTYPE 0x%08x", eColorFormat);
             return unknown;
@@ -127,17 +127,17 @@ const char *omxEventTypeEnum(OMX_EVENTTYPE eEvent) {
     static char unknown[32];
 
     switch (eEvent) {
-        case OMX_EventCmdComplete:               return "OMX_EventCmdComplete";
-        case OMX_EventError:                     return "OMX_EventError";
-        case OMX_EventMark:                      return "OMX_EventMark";
-        case OMX_EventPortSettingsChanged:       return "OMX_EventPortSettingsChanged";
-        case OMX_EventBufferFlag:                return "OMX_EventBufferFlag";
-        case OMX_EventResourcesAcquired:         return "OMX_EventResourcesAcquired";
-        case OMX_EventComponentResumed:          return "OMX_EventComponentResumed";
-        case OMX_EventDynamicResourcesAvailable: return "OMX_EventDynamicResourcesAvailable";
-        case OMX_EventPortFormatDetected:        return "OMX_EventPortFormatDetected";
-
-        case OMX_EventParamOrConfigChanged:      return "OMX_EventParamOrConfigChanged";
+        case CASE_STRING(OMX_EventCmdComplete);
+        case CASE_STRING(OMX_EventError);
+        case CASE_STRING(OMX_EventMark);
+        case CASE_STRING(OMX_EventPortSettingsChanged);
+        case CASE_STRING(OMX_EventBufferFlag);
+        case CASE_STRING(OMX_EventResourcesAcquired);
+        case CASE_STRING(OMX_EventComponentResumed);
+        case CASE_STRING(OMX_EventDynamicResourcesAvailable);
+        case CASE_STRING(OMX_EventPortFormatDetected);
+            
+        case CASE_STRING(OMX_EventParamOrConfigChanged);
 
         default: {
             snprintf(unknown, sizeof(unknown), "OMX_EVENTTYPE 0x%08x", eEvent);
@@ -152,12 +152,12 @@ const char *omxStateTypeEnum(OMX_STATETYPE eState) {
     static char unknown[32];
 
     switch (eState) {
-        case OMX_StateInvalid:          return "OMX_StateInvalid";
-        case OMX_StateLoaded:           return "OMX_StateLoaded";
-        case OMX_StateIdle:             return "OMX_StateIdle";
-        case OMX_StateExecuting:        return "OMX_StateExecuting";
-        case OMX_StatePause:            return "OMX_StatePause";
-        case OMX_StateWaitForResources: return "OMX_StateWaitForResources";
+        case CASE_STRING(OMX_StateInvalid);
+        case CASE_STRING(OMX_StateLoaded);
+        case CASE_STRING(OMX_StateIdle);
+        case CASE_STRING(OMX_StateExecuting);
+        case CASE_STRING(OMX_StatePause);
+        case CASE_STRING(OMX_StateWaitForResources);
 
         default: {
             snprintf(unknown, sizeof(unknown), "OMX_STATETYPE 0x%08x", eState);
@@ -172,14 +172,72 @@ const char *omxCommandTypeEnum(OMX_COMMANDTYPE eCommand) {
     static char unknown[32];
 
     switch (eCommand) {
-        case OMX_CommandStateSet:    return "OMX_CommandStateSet";
-        case OMX_CommandFlush:       return "OMX_CommandFlush";
-        case OMX_CommandPortDisable: return "OMX_CommandPortDisable";
-        case OMX_CommandPortEnable:  return "OMX_CommandPortEnable";
-        case OMX_CommandMarkBuffer:  return "OMX_CommandMarkBuffer";
+        case CASE_STRING(OMX_CommandStateSet);
+        case CASE_STRING(OMX_CommandFlush);
+        case CASE_STRING(OMX_CommandPortDisable);
+        case CASE_STRING(OMX_CommandPortEnable);
+        case CASE_STRING(OMX_CommandMarkBuffer);
 
         default: {
             snprintf(unknown, sizeof(unknown), "OMX_COMMANDTYPE 0x%08x", eCommand);
+            return unknown;
+        }
+    }
+}
+
+
+
+const char *omxErrorTypeEnum(OMX_ERRORTYPE eError) {
+    static char unknown[32];
+
+    switch (eError) {
+        case CASE_STRING(OMX_ErrorNone);
+        case CASE_STRING(OMX_ErrorInsufficientResources);
+        case CASE_STRING(OMX_ErrorUndefined);
+        case CASE_STRING(OMX_ErrorInvalidComponentName);
+        case CASE_STRING(OMX_ErrorComponentNotFound);
+        case CASE_STRING(OMX_ErrorInvalidComponent);
+            case CASE_STRING(OMX_ErrorBadParameter);
+            case CASE_STRING(OMX_ErrorNotImplemented);
+            case CASE_STRING(OMX_ErrorUnderflow);
+            case CASE_STRING(OMX_ErrorOverflow);
+            case CASE_STRING(OMX_ErrorHardware);
+            case CASE_STRING(OMX_ErrorInvalidState);
+            case CASE_STRING(OMX_ErrorStreamCorrupt);
+            case CASE_STRING(OMX_ErrorPortsNotCompatible);
+            case CASE_STRING(OMX_ErrorResourcesLost);
+            case CASE_STRING(OMX_ErrorNoMore);
+            case CASE_STRING(OMX_ErrorVersionMismatch);
+            case CASE_STRING(OMX_ErrorNotReady);
+            case CASE_STRING(OMX_ErrorTimeout);
+            case CASE_STRING(OMX_ErrorSameState);
+            case CASE_STRING(OMX_ErrorResourcesPreempted);
+            case CASE_STRING(OMX_ErrorPortUnresponsiveDuringAllocation);
+            case CASE_STRING(OMX_ErrorPortUnresponsiveDuringDeallocation);
+            case CASE_STRING(OMX_ErrorPortUnresponsiveDuringStop);
+            case CASE_STRING(OMX_ErrorIncorrectStateTransition);
+            case CASE_STRING(OMX_ErrorIncorrectStateOperation);
+            case CASE_STRING(OMX_ErrorUnsupportedSetting);
+            case CASE_STRING(OMX_ErrorUnsupportedIndex);
+            case CASE_STRING(OMX_ErrorBadPortIndex);
+            case CASE_STRING(OMX_ErrorPortUnpopulated);
+            case CASE_STRING(OMX_ErrorComponentSuspended);
+            case CASE_STRING(OMX_ErrorDynamicResourcesUnavailable);
+            case CASE_STRING(OMX_ErrorMbErrorsInFrame);
+            case CASE_STRING(OMX_ErrorFormatNotDetected);
+            case CASE_STRING(OMX_ErrorContentPipeOpenFailed);
+            case CASE_STRING(OMX_ErrorContentPipeCreationFailed);
+            case CASE_STRING(OMX_ErrorSeperateTablesUsed);
+            case CASE_STRING(OMX_ErrorTunnelingUnsupported);
+
+            case CASE_STRING(OMX_ErrorDiskFull);
+            case CASE_STRING(OMX_ErrorMaxFileSize);
+            case CASE_STRING(OMX_ErrorDrmUnauthorised);
+            case CASE_STRING(OMX_ErrorDrmExpired);
+            case CASE_STRING(OMX_ErrorDrmGeneral);
+
+        default: {
+            snprintf(unknown, sizeof(unknown), "OMX_ERRORTYPE 0x%08x", eError);
             return unknown;
         }
     }
@@ -219,7 +277,7 @@ void omxAssertState(OMX_HANDLETYPE handle, OMX_STATETYPE state) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_STATETYPE omxState = OMX_StateInvalid;
     omxErr = OMX_GetState(handle, &omxState);
-    assert(omxErr == OMX_ErrorNone);
+    omxAssert(omxErr);
     assert(omxState == state);
 }
 
@@ -233,11 +291,11 @@ void omxEnablePort(OMX_HANDLETYPE omxHandle, OMX_U32 portIndex, OMX_BOOL enabled
     portDefinition.nPortIndex = portIndex;
 
     omxErr = OMX_SendCommand(omxHandle, command[enabled], portIndex, NULL);
-    assert(omxErr == OMX_ErrorNone);
+    omxAssert(omxErr);
 
     do {
         omxErr = OMX_GetParameter(omxHandle, OMX_IndexParamPortDefinition, &portDefinition);
-        assert(omxErr == OMX_ErrorNone);
+        omxAssert(omxErr);
     } while (portDefinition.bEnabled != enabled);
 }
 
@@ -247,12 +305,12 @@ void omxSwitchToState(OMX_HANDLETYPE omxHandle, OMX_STATETYPE state) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_STATETYPE omxState = OMX_StateInvalid;
     omxErr = OMX_GetState(omxHandle, &omxState);
-    assert(omxErr == OMX_ErrorNone);
+    omxAssert(omxErr);
 
     if (omxState != state) {
         omxErr = OMX_SendCommand(omxHandle, OMX_CommandStateSet, state, NULL);
         printf("%x -> %x : %x\n", omxState, state, omxErr);
-        assert(omxErr == OMX_ErrorNone);
+        omxAssert(omxErr);
 
         int c = 10;
 
@@ -260,7 +318,7 @@ void omxSwitchToState(OMX_HANDLETYPE omxHandle, OMX_STATETYPE state) {
             c--;
             omxErr = OMX_GetState(omxHandle, &omxState);
             printf("test : %x -> %x : %x\n", omxState, state, omxErr);
-            assert(omxErr == OMX_ErrorNone);
+            omxAssert(omxErr);
             //sleep(1);
         } while (omxState != state && c);
     }

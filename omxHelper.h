@@ -10,6 +10,7 @@
 #define omxHelper_h
 
 
+#include <assert.h>
 #include <string.h>
 
 #define OMX_SKIP64BIT
@@ -37,6 +38,12 @@ memset((a), 0, size); \
 (a)->nVersion.s.nStep = OMX_VERSION_STEP
 
 
+#define omxAssert(x) if (x != OMX_ErrorNone) { \
+    printf("OMX_Error: %s\n", omxErrorTypeEnum(x)); \
+    assert(x == OMX_ErrorNone); \
+}
+
+
 extern const char *omxBoolEnum[];
 extern const char *omxDirTypeEnum[];
 extern const char *omxPortDomainTypeEnum[];
@@ -47,6 +54,7 @@ const char *omxColorFormatTypeEnum(OMX_COLOR_FORMATTYPE eColorFormat);
 const char *omxEventTypeEnum(OMX_EVENTTYPE eEvent);
 const char *omxStateTypeEnum(OMX_STATETYPE eState);
 const char *omxCommandTypeEnum(OMX_COMMANDTYPE eCommand);
+const char *omxErrorTypeEnum(OMX_ERRORTYPE eError);
 
 void omxDumpParamPortDefinition(OMX_PARAM_PORTDEFINITIONTYPE portDefinition);
 void omxDumpImagePortDefinition(OMX_IMAGE_PORTDEFINITIONTYPE image);

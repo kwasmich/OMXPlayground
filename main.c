@@ -9,7 +9,6 @@
 // inspired by https://github.com/hopkinskong/rpi-omx-jpeg-encode
 
 
-#include <assert.h>
 #include <stdio.h>
 
 #include <bcm_host.h>
@@ -18,6 +17,7 @@
 #include <IL/OMX_Core.h>
 
 #include "omxDump.h"
+#include "omxHelper.h"
 #include "omxImageRead.h"
 #include "omxJPEGDec.h"
 #include "omxJPEGEnc.h"
@@ -47,12 +47,12 @@ int main(int argc, const char * argv[]) {
     
     bcm_host_init();
     omxErr = OMX_Init();
-    assert(omxErr == OMX_ErrorNone);
+    omxAssert(omxErr);
 
     //omxDump();
-    //omxImageRead();
+    omxImageRead();
     //omxJPEGDec();
-    omxJPEGEnc();
+    //omxJPEGEnc();
 
     return 0;
 }

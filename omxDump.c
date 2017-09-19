@@ -54,7 +54,7 @@ static void omxPrintComponentVersion(OMX_HANDLETYPE omxHandle) {
     OMX_VERSIONTYPE pSpecVersion;
     OMX_UUIDTYPE pComponentUUID;
     omxErr = OMX_GetComponentVersion(omxHandle, pComponentName, &pComponentVersion, &pSpecVersion, &pComponentUUID);
-    assert(omxErr == OMX_ErrorNone);
+    omxAssert(omxErr);
 
     puts(COLOR_MAGENTA "**  Component Version  **" COLOR_NC);
     printf(LEVEL_1 "pComponentName:    %s\n", pComponentName);
@@ -102,7 +102,7 @@ void omxPrintPort(OMX_HANDLETYPE omxHandle, OMX_U32 portIndex) {
     OMX_INIT_STRUCTURE(portDefinition);
     portDefinition.nPortIndex = portIndex;
     omxErr = OMX_GetParameter(omxHandle, OMX_IndexParamPortDefinition, &portDefinition);
-    assert(omxErr == OMX_ErrorNone);
+    omxAssert(omxErr);
     puts("");
     puts(LEVEL_1 COLOR_CYAN "**  Port  **" COLOR_NC);
 
@@ -147,7 +147,7 @@ static void omxListPorts(OMX_HANDLETYPE omxHandle) {
 
     for (int i = 0; i < 4; i++) {
         omxErr == OMX_GetParameter(omxHandle, types[i], &ports);
-        assert(omxErr == OMX_ErrorNone);
+        omxAssert(omxErr);
 
         if (ports.nPorts > 0) {
             printf(LEVEL_1 "Domain: %s\n", typeStrings[i]);
@@ -178,7 +178,7 @@ static OMX_ERRORTYPE omxEventHandler(
             break;
 
         case OMX_EventError:
-            printf("error event: %x %x\n", nData1, nData2);
+            printf(COLOR_RED "ErrorType: %s,  nData2: %x\n" COLOR_NC, omxErrorTypeEnum(nData1), nData2);
 
             if (nData1 != OMX_ErrorStreamCorrupt) {
                 assert(NULL);
@@ -224,7 +224,7 @@ void omxDump() {
 
     OMX_STRING omxComponentName = stringBackingStore;
     omxErr = OMX_ComponentNameEnum(omxComponentName, 256, 14);
-    assert(omxErr == OMX_ErrorNone);
+    omxAssert(omxErr);
 
     puts(COLOR_GREEN "*************************************************************" COLOR_NC);
     printf(COLOR_GREEN "**  Showing informations for %28s  **\n" COLOR_NC, omxComponentName);
@@ -236,9 +236,9 @@ void omxDump() {
     omxCallbacks.EmptyBufferDone = omxEmptyBufferDone;
     omxCallbacks.FillBufferDone = omxFillBufferDone;
     omxErr = OMX_GetHandle(&omxHandle, omxComponentName, NULL, &omxCallbacks);
-    assert(omxErr == OMX_ErrorNone);
+    omxAssert(omxErr);
     omxErr = OMX_GetState(omxHandle, &omxState);
-    assert(omxErr == OMX_ErrorNone);
+    omxAssert(omxErr);
     assert(omxState == OMX_StateLoaded);
 
 
@@ -247,7 +247,7 @@ void omxDump() {
 
     
     omxErr = OMX_FreeHandle(omxHandle);
-    assert(omxErr == OMX_ErrorNone);
+    omxAssert(omxErr);
     
     // insert code here...
     printf("Hello, World!\n");

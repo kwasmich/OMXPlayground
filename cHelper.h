@@ -24,5 +24,6 @@
 #define LEVEL_2 "        "
 #define LEVEL_3 "            "
 
+#define CASE_STRING(x) x: return #x
 
 #endif /* cHelper_h */
