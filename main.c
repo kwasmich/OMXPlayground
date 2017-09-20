@@ -50,8 +50,8 @@ int main(int argc, const char * argv[]) {
     omxAssert(omxErr);
 
     //omxDump();
-    omxImageRead();
-    //omxJPEGDec();
+    //omxImageRead();
+    omxJPEGDec();
     //omxJPEGEnc();
 
     return 0;

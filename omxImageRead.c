@@ -129,7 +129,7 @@ static OMX_ERRORTYPE omxFillBufferDone(
 
 
 static void setupInputPort(ComponentContext *ctx) {
-    char uri[] = "file:///home/pi/Developer/OMXPlayground/36903_9_1.jpg";
+    char uri[] = "/home/pi/Developer/OMXPlayground/36903_9_1.jpg";
     size_t size = sizeof(OMX_PARAM_CONTENTURITYPE) + strlen(uri);
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_PARAM_CONTENTURITYPE *contentURI = malloc(size);

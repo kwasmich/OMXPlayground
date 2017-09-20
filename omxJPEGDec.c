@@ -15,11 +15,13 @@
 #include <sys/param.h>
 
 #define OMX_SKIP64BIT
+#include <IL/OMX_Broadcom.h>
 #include <IL/OMX_Component.h>
 #include <IL/OMX_Core.h>
 #include <interface/vcos/vcos.h>
 
 #include "cHelper.h"
+#include "mmapHelper.h"
 #include "omxHelper.h"
 #include "omxDump.h"
 
@@ -27,16 +29,34 @@
 
 typedef struct {
     OMX_HANDLETYPE handle;
+
+    OMX_U32 inputPortIndex;
+    //    OMX_PARAM_PORTDEFINITIONTYPE *inputPortDefinition;
+    //    OMX_IMAGE_PARAM_PORTFORMATTYPE *inputImagePortFormat;
     OMX_BUFFERHEADERTYPE *inputBuffer[3];
+    bool inputReady;
+
+    OMX_U32 outputPortIndex;
+    //    OMX_PARAM_PORTDEFINITIONTYPE *outputPortDefinition;
+    //    OMX_PARAM_U32TYPE *outputNumAvailableStreams;
+    //    OMX_PARAM_U32TYPE *outputActiveStream;
+    //    OMX_IMAGE_PARAM_PORTFORMATTYPE *outputImagePortFormat;
+    //    OMX_CONFIG_METADATAITEMCOUNTTYPE *outputMetadataItemCount;
+    //    OMX_CONFIG_METADATAITEMTYPE *outputMetadataItem;
+    //    OMX_PARAM_METADATAFILTERTYPE *outputMetadataFilterType;
+    //    OMX_CONFIG_CONTAINERNODECOUNTTYPE *outputContainerNodeCount;
+    //    OMX_CONFIG_CONTAINERNODEIDTYPE *outputCounterNodeID;
+    //    OMX_PARAM_COLORSPACETYPE *outputColorSpace;
     OMX_BUFFERHEADERTYPE *outputBuffer;
+    bool outputReady;
+
     VCOS_SEMAPHORE_T handler_lock;
     VCOS_SEMAPHORE_T portChangeLock;
-    OMX_U32 inputPortIndex;
-    OMX_U32 outputPortIndex;
-    bool inputReady;
-    bool outputReady;
-    int flushed;
-} ComponentContext;
+} OMXImageDecode_s;
+
+
+
+
 
 
 
@@ -50,7 +70,7 @@ static OMX_ERRORTYPE omxEventHandler(
 
     printf("eEvent: %s,  ", omxEventTypeEnum(eEvent));
     //printf("eEvent: %s,  nData1: %x,  nData2: %x\n", omxEventTypeEnum(eEvent), nData1, nData2);
-    ComponentContext* ctx = (ComponentContext*)pAppData;
+    OMXImageDecode_s* ctx = (OMXImageDecode_s*)pAppData;
 
     switch(eEvent) {
         case OMX_EventCmdComplete:
@@ -70,13 +90,6 @@ static OMX_ERRORTYPE omxEventHandler(
                     printf("nData2: 0x%x\n", nData2);
             }
 
-            vcos_semaphore_wait(&ctx->handler_lock);
-
-            if ( nData1 == OMX_CommandFlush ) {
-                ctx->flushed = true;
-            }
-
-            vcos_semaphore_post(&ctx->handler_lock);
             break;
 
         case OMX_EventPortSettingsChanged:
@@ -93,8 +106,7 @@ static OMX_ERRORTYPE omxEventHandler(
             break;
 
         default:
-            printf("nData1: %x,  nData2: %x\n", nData1, nData2);
-            printf("unhandeled event %x: %x %x\n", eEvent, nData1, nData2);
+            printf("unhandeled event 0x%08x: 0x%08x 0x%08x\n", eEvent, nData1, nData2);
             break;
     }
 
@@ -108,7 +120,7 @@ static OMX_ERRORTYPE omxEmptyBufferDone(
                                         OMX_IN OMX_PTR pAppData,
                                         OMX_IN OMX_BUFFERHEADERTYPE* pBuffer) {
     puts("omxEmptyBufferDone");
-    ComponentContext *ctx = (ComponentContext*)pAppData;
+    OMXImageDecode_s *ctx = (OMXImageDecode_s*)pAppData;
     vcos_semaphore_wait(&ctx->handler_lock);
     ctx->inputReady = true;
     vcos_semaphore_post(&ctx->handler_lock);
@@ -122,7 +134,7 @@ static OMX_ERRORTYPE omxFillBufferDone(
                                        OMX_OUT OMX_PTR pAppData,
                                        OMX_OUT OMX_BUFFERHEADERTYPE* pBuffer) {
     puts("omxFillBufferDone");
-    ComponentContext *ctx = (ComponentContext*)pAppData;
+    OMXImageDecode_s *ctx = (OMXImageDecode_s*)pAppData;
     vcos_semaphore_wait(&ctx->handler_lock);
     ctx->outputReady = true;
     vcos_semaphore_post(&ctx->handler_lock);
@@ -131,86 +143,7 @@ static OMX_ERRORTYPE omxFillBufferDone(
 
 
 
-static unsigned char *rawFromFileContents(const char *in_FILE_NAME, const bool in_ZERO_TERMINATE, int *out_fileSize) {
-    unsigned char *fileContents = NULL;
-    FILE *fileStream = fopen(in_FILE_NAME, "rb");
-
-    if (!fileStream) {
-        perror(in_FILE_NAME);
-        *out_fileSize = 0;
-        return fileContents;
-    }
-
-    int err = fseek(fileStream, 0L, SEEK_END);
-
-    if (err != 0) {
-        perror(in_FILE_NAME);
-        *out_fileSize = 0;
-        err = fclose(fileStream);
-
-        if (err != 0) {
-            perror(in_FILE_NAME);
-        }
-
-        fileStream = NULL;
-        return fileContents;
-    }
-
-    long length = ftell(fileStream);
-
-    if (length == -1) {
-        perror(in_FILE_NAME);
-        *out_fileSize = 0;
-        err = fclose(fileStream);
-
-        if (err != 0) {
-            perror(in_FILE_NAME);
-        }
-
-        fileStream = NULL;
-        return fileContents;
-    }
-
-    rewind(fileStream);
-
-    size_t mallocCount = (in_ZERO_TERMINATE) ? length + 1 : length;
-    fileContents = malloc(sizeof(unsigned char) * mallocCount);
-
-    if (!fileContents) {
-        perror(in_FILE_NAME);
-        *out_fileSize = 0;
-        err = fclose(fileStream);
-
-        if (err != 0) {
-            perror(in_FILE_NAME);
-        }
-
-        fileStream = NULL;
-        return fileContents;
-    }
-
-    long readLength = fread(fileContents, sizeof(unsigned char), length, fileStream);
-    assert(readLength == length);
-
-    err = fclose(fileStream);
-
-    if (err != 0) {
-        perror(in_FILE_NAME);
-    }
-
-    fileStream = NULL;
-
-    if (in_ZERO_TERMINATE) {
-        fileContents[length] = 0;
-    }
-
-    *out_fileSize = length;
-    return fileContents;
-}
-
-
-
-static void setupInputPort(ComponentContext *ctx) {
+static void setupInputPort(OMXImageDecode_s *ctx, OMX_IMAGE_CODINGTYPE format) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_PARAM_PORTDEFINITIONTYPE portDefinition;
     OMX_INIT_STRUCTURE(portDefinition);
@@ -218,10 +151,12 @@ static void setupInputPort(ComponentContext *ctx) {
     omxErr = OMX_GetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
     omxAssert(omxErr);
 
+    //omxPrintPort(ctx->handle, ctx->inputPortIndex);
+
     OMX_IMAGE_PARAM_PORTFORMATTYPE imagePortFormat;
     OMX_INIT_STRUCTURE(imagePortFormat);
     imagePortFormat.nPortIndex = ctx->inputPortIndex;
-    imagePortFormat.eCompressionFormat = OMX_IMAGE_CodingJPEG; // OMX_IMAGE_CodingJPEG;
+    imagePortFormat.eCompressionFormat = format;
     omxErr = OMX_SetParameter(ctx->handle, OMX_IndexParamImagePortFormat, &imagePortFormat);
     omxAssert(omxErr);
 
@@ -235,80 +170,47 @@ static void setupInputPort(ComponentContext *ctx) {
 
 
 
-static void setupOutputPort(ComponentContext *ctx) {
+static void prepareOutputPort(OMXImageDecode_s *ctx) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_PARAM_PORTDEFINITIONTYPE portDefinition;
     OMX_INIT_STRUCTURE(portDefinition);
     portDefinition.nPortIndex = ctx->outputPortIndex;
     omxErr = OMX_GetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
     omxAssert(omxErr);
-    printf("%d x %d\n", portDefinition.format.image.nFrameWidth, portDefinition.format.image.nFrameHeight);
-
-
-    omxPrintPort(ctx->handle, ctx->outputPortIndex);
-
-
-//    portDefinition.format.image.eColorFormat = OMX_COLOR_Format32bitABGR8888;
-//    portDefinition.format.image.nSliceHeight = 256;
-//    omxErr = OMX_SetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
-//    omxAssert(omxErr);
-//    OMX_INIT_STRUCTURE(portDefinition);
-//    portDefinition.nPortIndex = ctx->outputPortIndex;
-//    omxErr = OMX_GetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
-//    omxAssert(omxErr);
-
-
-    omxEnablePort(ctx->handle, ctx->outputPortIndex, OMX_TRUE);
-    omxPrintPort(ctx->handle, ctx->outputPortIndex);
-
-
-    omxErr = OMX_AllocateBuffer(ctx->handle, &ctx->outputBuffer, ctx->outputPortIndex, NULL, portDefinition.nBufferSize);
+    portDefinition.format.image.eCompressionFormat = OMX_IMAGE_CodingAutoDetect;
+    omxErr = OMX_SetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
     omxAssert(omxErr);
-
-
-
-    //    portDefinition.format.image.nFrameWidth = rawImageWidth;
-    //    portDefinition.format.image.nFrameHeight = rawImageHeight;
-    //    portDefinition.format.image.bFlagErrorConcealment = OMX_FALSE;
-    //    portDefinition.format.image.eCompressionFormat = OMX_IMAGE_CodingJPEG;
-    //    portDefinition.format.image.eColorFormat = OMX_COLOR_FormatYUV420PackedPlanar;
-    //
-    //    omxErr = OMX_SetParameter(ctx.handle, OMX_IndexParamPortDefinition, &portDefinition);
-    //    omxAssert(omxErr);
-    //
-    //    OMX_INIT_STRUCTURE(portDefinition);
-    //    portDefinition.nPortIndex = ctx.outputPortIndex;
-    //    omxErr = OMX_GetParameter(ctx.handle, OMX_IndexParamPortDefinition, &portDefinition);
-    //    omxAssert(omxErr);
-    //
-    //
-    //
-    //    OMX_IMAGE_PARAM_QFACTORTYPE qFactor;
-    //    OMX_INIT_STRUCTURE(qFactor);
-    //    qFactor.nPortIndex = ctx.outputPortIndex;
-    //    qFactor.nQFactor = outputQuality;
-    //
-    //    omxErr = OMX_SetParameter(ctx.handle, OMX_IndexParamQFactor, &qFactor);
-    //    omxAssert(omxErr);
-    //
-    //
-    //    omxEnablePort(ctx.handle, ctx.outputPortIndex, OMX_TRUE);
-    //
-    //
-    //    OMX_PARAM_PORTDEFINITIONTYPE portDefinition;
-    //    OMX_INIT_STRUCTURE(portDefinition);
-    //    portDefinition.nPortIndex = ctx.outputPortIndex;
-    //    omxErr = OMX_GetParameter(ctx.handle, OMX_IndexParamPortDefinition, &portDefinition);
-    //    omxAssert(omxErr);
-    //    assert(portDefinition.eDir == OMX_DirOutput);
-    //
-    //    omxErr = OMX_AllocateBuffer(ctx.handle, &ctx.outputBuffer, ctx.outputPortIndex, NULL, portDefinition.nBufferSize);
-    //    omxAssert(omxErr);
 }
 
 
 
-static void omxGetPorts(ComponentContext *ctx) {
+static void setupOutputPort(OMXImageDecode_s *ctx) {
+    OMX_ERRORTYPE omxErr = OMX_ErrorNone;
+    OMX_PARAM_PORTDEFINITIONTYPE portDefinition;
+    OMX_INIT_STRUCTURE(portDefinition);
+    portDefinition.nPortIndex = ctx->outputPortIndex;
+    omxErr = OMX_GetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
+    omxAssert(omxErr);
+
+    OMX_PARAM_U32TYPE numAvailableStreams;
+    OMX_INIT_STRUCTURE(numAvailableStreams);
+    numAvailableStreams.nPortIndex = ctx->outputPortIndex;
+    omxErr = OMX_GetParameter(ctx->handle, OMX_IndexParamNumAvailableStreams, &numAvailableStreams);
+    omxAssert(omxErr);
+    assert(numAvailableStreams.nU32 > 0);
+
+    //printf("%d x %d\n", portDefinition.format.image.nFrameWidth, portDefinition.format.image.nFrameHeight);
+    //omxPrintPort(ctx->handle, ctx->outputPortIndex);
+
+    omxEnablePort(ctx->handle, ctx->outputPortIndex, OMX_TRUE);
+
+    omxErr = OMX_AllocateBuffer(ctx->handle, &ctx->outputBuffer, ctx->outputPortIndex, NULL, portDefinition.nBufferSize);
+    omxAssert(omxErr);
+}
+
+
+
+static void omxGetPorts(OMXImageDecode_s *ctx) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_PORT_PARAM_TYPE ports;
     OMX_INIT_STRUCTURE(ports);
@@ -337,12 +239,12 @@ static void omxGetPorts(ComponentContext *ctx) {
 
 
 
-
 void omxJPEGDec() {
-    size_t jpegDataSize = 0;
-    uint8_t *jpegData = (uint8_t *)rawFromFileContents("36903_9_1.jpg", 0, &jpegDataSize);
-    assert(jpegData && jpegDataSize > 0);
-    printf("jpegDataSize: %zu\n", jpegDataSize);
+    MapFile_s map;
+    initMapFile(&map, "36903_9_1.jpg", MAP_RO);
+    assert(map.len > 0);
+    uint8_t *jpegData = map.data;
+    printf("jpegDataSize: %zu\n", map.len);
 
     uint32_t rawImageWidth = 0;
     uint32_t rawImageHeight = 0;
@@ -360,8 +262,9 @@ void omxJPEGDec() {
 
     //omxListComponents();
 
-    ComponentContext ctx;
+    OMXImageDecode_s ctx;
     memset(&ctx, 0, sizeof(ctx));
+    //ctx.inputPortDefinition = malloc(sizeof(OMX_PARAM_PORTDEFINITIONTYPE));
 
     vcosErr = vcos_semaphore_create(&ctx.handler_lock, "handler_lock", 1);
     assert(vcosErr == VCOS_SUCCESS);
@@ -384,13 +287,13 @@ void omxJPEGDec() {
     omxEnablePort(ctx.handle, ctx.inputPortIndex, OMX_FALSE);
     omxEnablePort(ctx.handle, ctx.outputPortIndex, OMX_FALSE);
     omxSwitchToState(ctx.handle, OMX_StateIdle);
-    setupInputPort(&ctx);
-    //prepareOutputPort(&ctx);
+    setupInputPort(&ctx, OMX_IMAGE_CodingJPEG);
+    prepareOutputPort(&ctx);
     omxSwitchToState(ctx.handle, OMX_StateExecuting);
 
 
     uint8_t *jpegDataPtr = jpegData;
-    size_t jpegDataRemaining = jpegDataSize;
+    size_t jpegDataRemaining = map.len;
     int bufferIndex = 0;
     ctx.inputReady = true;
     ctx.outputReady = false;
@@ -458,94 +361,37 @@ void omxJPEGDec() {
     }
 
     fclose(output);
-    return;
-    //
-    //
-    //    int pos = 0;
-    //    ctx.inputReady = true;
-    //    ctx.outputReady = false;
-    //
-    //
-    //    omxErr = OMX_FillThisBuffer(ctx.handle, ctx.outputBuffer);
-    //    omxAssert(omxErr);
-    //
-    //    FILE * output = fopen("out.jpg", "wb");
-    //
-    //    while (true) {
-    //        if (ctx.outputReady) {
-    //            fwrite(ctx.outputBuffer->pBuffer + ctx.outputBuffer->nOffset, sizeof(uint8_t), ctx.outputBuffer->nFilledLen, output);
-    //
-    //            if (ctx.outputBuffer->nFlags & OMX_BUFFERFLAG_ENDOFFRAME) {
-    //                break;
-    //            }
-    //
-    //            ctx.outputReady = false;
-    //            omxErr = OMX_FillThisBuffer(ctx.handle, ctx.outputBuffer);
-    //            omxAssert(omxErr);
-    //        }
-    //
-    //        if (ctx.inputReady) {
-    //            if (pos == rawImageSize) {
-    //                ctx.inputReady = false;
-    //                continue;
-    //            }
-    //
-    //            memcpy(ctx.inputBuffer->pBuffer, &rawImage[pos], sliceSize);
-    //            ctx.inputBuffer->nOffset = 0;
-    //            ctx.inputBuffer->nFilledLen = sliceSize;
-    //            pos += sliceSize;
-    //
-    //            if (pos + sliceSize > rawImageSize) {
-    //                sliceSize = rawImageSize - pos;
-    //            }
-    //
-    //            ctx.inputReady = false;
-    //            omxErr = OMX_EmptyThisBuffer(ctx.handle, ctx.inputBuffer);
-    //            omxAssert(omxErr);
-    //        }
-    //    }
-    //
-    //    fclose(output);
-    //    puts(COLOR_RED "done" COLOR_NC " blaub " COLOR_GREEN "yes" COLOR_NC);
-    //
-    //
-    //    puts("1");
-    //    omxSwitchToState(ctx.handle, OMX_StateIdle);
-    //    puts("2");
-    //    omxEnablePort(ctx.handle, ctx.inputPortIndex, OMX_FALSE);
-    //    puts("3");
-    //    omxEnablePort(ctx.handle, ctx.outputPortIndex, OMX_FALSE);
-    //    puts("4");
-    //
-    //
-    //    // Deallocate input buffer
-    //    {
-    //        omxErr = OMX_FreeBuffer(ctx.handle, ctx.inputPortIndex, ctx.inputBuffer);
-    //        omxAssert(omxErr);
-    //    }
-    //
-    //    puts("5");
-    //
-    //    // Deallocate output buffer
-    //    {
-    //        omxErr = OMX_FreeBuffer(ctx.handle, ctx.outputPortIndex, ctx.outputBuffer);
-    //        omxAssert(omxErr);
-    //    }
-    //    
-    //    puts("6");
-    //    
-    //    
-    //    omxSwitchToState(ctx.handle, OMX_StateLoaded);
-    //    
-    //    omxErr = OMX_FreeHandle(ctx.handle);
-    //    omxAssert(omxErr);
-    //    
-    //    
-    //    //    for (uint32_t i = 0; i < 3000; i++) {
-    //    //        usleep(8000);
-    //    //    }
-    //    
-    //    // insert code here...
-    //    printf("Hello, World!\n");
-    //    return 0;
+    freeMapFile(&map);
+
+    omxSwitchToState(ctx.handle, OMX_StateIdle);
+    omxEnablePort(ctx.handle, ctx.inputPortIndex, OMX_FALSE);
+    omxEnablePort(ctx.handle, ctx.outputPortIndex, OMX_FALSE);
+
+    // Deallocate input buffer
+    {
+        OMX_PARAM_PORTDEFINITIONTYPE portDefinition;
+        OMX_INIT_STRUCTURE(portDefinition);
+        portDefinition.nPortIndex = ctx.inputPortIndex;
+        omxErr = OMX_GetParameter(ctx.handle, OMX_IndexParamPortDefinition, &portDefinition);
+        omxAssert(omxErr);
+
+        for (int i = 0; i < portDefinition.nBufferCountActual; i++) {
+            omxErr = OMX_FreeBuffer(ctx.handle, ctx.inputPortIndex, ctx.inputBuffer[i]);
+            omxAssert(omxErr);
+        }
+    }
+    
+    // Deallocate output buffer
+    {
+        omxErr = OMX_FreeBuffer(ctx.handle, ctx.outputPortIndex, ctx.outputBuffer);
+        omxAssert(omxErr);
+    }
+    
+    omxSwitchToState(ctx.handle, OMX_StateLoaded);
+    omxErr = OMX_FreeHandle(ctx.handle);
+    omxAssert(omxErr);
+    
+    // insert code here...
+    printf("Hello, World!\n");
+    return 0;
 }

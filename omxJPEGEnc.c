@@ -34,7 +34,6 @@ typedef struct {
     OMX_U32 outputPortIndex;
     bool inputReady;
     bool outputReady;
-    bool flushed; // what is it good for?
 } ComponentContext;
 
 
@@ -69,13 +68,6 @@ static OMX_ERRORTYPE omxEventHandler(
                     printf("nData2: 0x%x\n", nData2);
             }
 
-            vcos_semaphore_wait(&ctx->handler_lock);
-
-            if ( nData1 == OMX_CommandFlush ) {
-                ctx->flushed = true;
-            }
-
-            vcos_semaphore_post(&ctx->handler_lock);
             break;
 
         case OMX_EventError:
