@@ -13,14 +13,14 @@
 
 #include <bcm_host.h>
 #define OMX_SKIP64BIT
-#include <IL/OMX_Component.h>
 #include <IL/OMX_Core.h>
 
 #include "omxDump.h"
 #include "omxHelper.h"
-#include "omxImageRead.h"
+//#include "omxImageRead.h"
 #include "omxJPEGDec.h"
 #include "omxJPEGEnc.h"
+#include "omxResize.h"
 
 
 
@@ -51,8 +51,9 @@ int main(int argc, const char * argv[]) {
 
     //omxDump();
     //omxImageRead();
-    omxJPEGDec();
+    //omxJPEGDec();
     //omxJPEGEnc();
+    omxResize();
 
     return 0;
 }

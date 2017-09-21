@@ -223,7 +223,7 @@ void omxDump() {
 
 
     OMX_STRING omxComponentName = stringBackingStore;
-    omxErr = OMX_ComponentNameEnum(omxComponentName, 256, 14);
+    omxErr = OMX_ComponentNameEnum(omxComponentName, 256, 17);
     omxAssert(omxErr);
 
     puts(COLOR_GREEN "*************************************************************" COLOR_NC);

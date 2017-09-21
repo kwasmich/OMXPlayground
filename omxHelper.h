@@ -11,6 +11,7 @@
 
 
 #include <assert.h>
+#include <stdbool.h>
 #include <string.h>
 
 #define OMX_SKIP64BIT
@@ -24,11 +25,11 @@ memset(&(a), 0, sizeof(a)); \
 (a).nSize = sizeof(a); \
 (a).nVersion.nVersion = OMX_VERSION;
 
-//#define OMX_INIT_STRUCTURE2(a) \
-//assert(a != NULL); \
-//memset((a), 0, sizeof(*a)); \
-//(a)->nSize = sizeof(*a); \
-//(a)->nVersion.nVersion = OMX_VERSION;
+#define OMX_INIT_STRUCTURE2(a) \
+assert(a != NULL); \
+/*memset((a), 0, sizeof(*a));*/ \
+(a)->nSize = sizeof(*a); \
+(a)->nVersion.nVersion = OMX_VERSION;
 
 #define OMX_INIT_STRUCTURE_P(a, size) \
 memset((a), 0, size); \
@@ -58,6 +59,8 @@ void omxDumpParamPortDefinition(OMX_PARAM_PORTDEFINITIONTYPE portDefinition);
 void omxDumpImagePortDefinition(OMX_IMAGE_PORTDEFINITIONTYPE image);
 
 void omxAssertState(OMX_HANDLETYPE handle, OMX_STATETYPE state);
+bool omxAssertImagePortFormatSupported(OMX_HANDLETYPE omxHandle, OMX_U32 nPortIndex, OMX_COLOR_FORMATTYPE eColorFormat);
+
 void omxEnablePort(OMX_HANDLETYPE omxHandle, OMX_U32 portIndex, OMX_BOOL enabled);
 void omxSwitchToState(OMX_HANDLETYPE omxHandle, OMX_STATETYPE state);
 

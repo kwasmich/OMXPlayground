@@ -216,10 +216,11 @@ static void omxFreeBuffers(ComponentContext *ctx) {
 
 void omxJPEGEnc() {
     OMX_U32 outputQuality = 7;      // [1, 100] as in libJPEG 9
+    OMX_S32 sliceHeight = 128;
+
     uint32_t rawImageWidth = 1440;
     uint32_t rawImageHeight = 1200;
     uint8_t rawImageChannels = 3;
-    OMX_S32 sliceHeight = 128;
     uint32_t sliceSize = rawImageWidth * sliceHeight * rawImageChannels;
     size_t rawImageSize = rawImageWidth * rawImageHeight * rawImageChannels;
     uint8_t *rawImage = (uint8_t *)malloc(rawImageSize);
@@ -249,7 +250,6 @@ void omxJPEGEnc() {
     omxCallbacks.EventHandler = omxEventHandler;
     omxCallbacks.EmptyBufferDone = omxEmptyBufferDone;
     omxCallbacks.FillBufferDone = omxFillBufferDone;
-
     omxErr = OMX_GetHandle(&ctx.handle, omxComponentName, &ctx, &omxCallbacks);
     omxAssert(omxErr);
     omxAssertState(ctx.handle, OMX_StateLoaded);

@@ -12,7 +12,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include <sys/param.h>
+#include <sys/param.h>  // MIN
 
 #define OMX_SKIP64BIT
 #include <IL/OMX_Broadcom.h>

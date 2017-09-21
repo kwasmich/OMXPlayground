@@ -283,6 +283,31 @@ void omxAssertState(OMX_HANDLETYPE handle, OMX_STATETYPE state) {
 
 
 
+bool omxAssertImagePortFormatSupported(OMX_HANDLETYPE omxHandle, OMX_U32 nPortIndex, OMX_COLOR_FORMATTYPE eColorFormat) {
+    OMX_ERRORTYPE omxErr = OMX_ErrorNone;
+    OMX_IMAGE_PARAM_PORTFORMATTYPE portformat;
+    OMX_INIT_STRUCTURE(portformat);
+    portformat.nPortIndex = nPortIndex;
+    int i = 0;
+
+    do {
+        portformat.nIndex = i;
+        omxErr = OMX_GetParameter(omxHandle, OMX_IndexParamImagePortFormat, &portformat);
+
+        if (omxErr == OMX_ErrorNone) {
+            if (portformat.eColorFormat == eColorFormat) {
+                return true;
+            }
+
+            i++;
+        }
+    } while (omxErr == OMX_ErrorNone);
+
+    return false;
+}
+
+
+
 void omxEnablePort(OMX_HANDLETYPE omxHandle, OMX_U32 portIndex, OMX_BOOL enabled) {
     static const OMX_COMMANDTYPE command[2] = {OMX_CommandPortDisable, OMX_CommandPortEnable};
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
