@@ -56,6 +56,21 @@ typedef struct {
 
 
 
+typedef struct {
+    OMX_U32 nWidth;
+    OMX_U32 nHeight;
+} OMXSize_t;
+
+
+typedef struct {
+    OMX_S32 nLeft;
+    OMX_S32 nTop;
+    OMX_U32 nWidth;
+    OMX_U32 nHeight;
+} OMXRect_t;
+
+
+
 static OMX_ERRORTYPE omxEventHandler(
                                      OMX_IN OMX_HANDLETYPE hComponent,
                                      OMX_IN OMX_PTR pAppData,
@@ -166,25 +181,29 @@ static void omxGetPorts(OMXResize_s *component) {
 
 
 
-static void omxSetupInputPort(OMXResize_s *component, OMX_U32 nFrameWidth, OMX_U32 nFrameHeight, OMX_U32 nSliceHeight, OMX_U32 nChannels, OMX_COLOR_FORMATTYPE eColorFormat) {
-    assert(nSliceHeight == 16);
+static void omxSetupInputPort(OMXResize_s *component, OMXSize_t frameSize, OMXRect_t cropRect, OMX_COLOR_FORMATTYPE eColorFormat) {
     assert(omxAssertImagePortFormatSupported(component->handle, component->inputPortIndex, eColorFormat));
 
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
+    OMX_CONFIG_PORTBOOLEANTYPE *brcmSupportsSlices = &component->inputBrcmSupportsSlices;
+    OMX_INIT_STRUCTURE2(brcmSupportsSlices);
+    brcmSupportsSlices->nPortIndex = component->inputPortIndex;
+    omxErr = OMX_GetParameter(component->handle, OMX_IndexParamBrcmSupportsSlices, brcmSupportsSlices);
+    omxAssert(omxErr);
+
     OMX_PARAM_PORTDEFINITIONTYPE *portDefinition = &component->inputPortDefinition;
     OMX_INIT_STRUCTURE2(portDefinition);
     portDefinition->nPortIndex = component->inputPortIndex;
     omxErr = OMX_GetParameter(component->handle, OMX_IndexParamPortDefinition, portDefinition);
     omxAssert(omxErr);
 
-    portDefinition->format.image.nFrameWidth = nFrameWidth;
-    portDefinition->format.image.nFrameHeight = nFrameHeight;
-    portDefinition->format.image.nSliceHeight = 0;
+    portDefinition->format.image.nFrameWidth = frameSize.nWidth;
+    portDefinition->format.image.nFrameHeight = frameSize.nHeight;
+    portDefinition->format.image.nSliceHeight = (brcmSupportsSlices->bEnabled == OMX_TRUE) ? 16 : 0;
     portDefinition->format.image.nStride = 0;
     portDefinition->format.image.bFlagErrorConcealment = OMX_FALSE;
     portDefinition->format.image.eCompressionFormat = OMX_IMAGE_CodingUnused;
     portDefinition->format.image.eColorFormat = eColorFormat;
-    portDefinition->nBufferSize = nFrameWidth * nSliceHeight * nChannels;
     omxErr = OMX_SetParameter(component->handle, OMX_IndexParamPortDefinition, portDefinition);
     omxAssert(omxErr);
 
@@ -194,6 +213,16 @@ static void omxSetupInputPort(OMXResize_s *component, OMX_U32 nFrameWidth, OMX_U
     OMX_CONFIG_RECTTYPE *commonInputCrop = &component->inputCommonInputCrop;
     OMX_INIT_STRUCTURE2(commonInputCrop);
     commonInputCrop->nPortIndex = component->inputPortIndex;
+    omxErr = OMX_GetParameter(component->handle, OMX_IndexConfigCommonInputCrop, commonInputCrop);
+    omxAssert(omxErr);
+
+    commonInputCrop->nWidth = cropRect.nWidth;
+    commonInputCrop->nHeight = cropRect.nHeight;
+    commonInputCrop->nLeft = cropRect.nLeft;
+    commonInputCrop->nTop = cropRect.nTop;
+    omxErr = OMX_SetParameter(component->handle, OMX_IndexConfigCommonInputCrop, commonInputCrop);
+    omxAssert(omxErr);
+
     omxErr = OMX_GetParameter(component->handle, OMX_IndexConfigCommonInputCrop, commonInputCrop);
     omxAssert(omxErr);
 
@@ -210,8 +239,14 @@ static void omxSetupInputPort(OMXResize_s *component, OMX_U32 nFrameWidth, OMX_U
 
 
 
-static void omxSetupOutputPort(OMXResize_s *component, OMX_U32 nFrameWidth, OMX_U32 nFrameHeight, OMX_COLOR_FORMATTYPE eColorFormat) {
+static void omxSetupOutputPort(OMXResize_s *component, OMXSize_t frameSize, OMX_COLOR_FORMATTYPE eColorFormat) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
+    OMX_CONFIG_PORTBOOLEANTYPE *brcmSupportsSlices = &component->outputBrcmSupportsSlices;
+    OMX_INIT_STRUCTURE2(brcmSupportsSlices);
+    brcmSupportsSlices->nPortIndex = component->outputPortIndex;
+    omxErr = OMX_GetParameter(component->handle, OMX_IndexParamBrcmSupportsSlices, brcmSupportsSlices);
+    omxAssert(omxErr);
+
     OMX_PARAM_PORTDEFINITIONTYPE *portDefinition = &component->outputPortDefinition;
     OMX_INIT_STRUCTURE2(portDefinition);
     portDefinition->nPortIndex = component->outputPortIndex;
@@ -220,14 +255,13 @@ static void omxSetupOutputPort(OMXResize_s *component, OMX_U32 nFrameWidth, OMX_
 
     omxPrintPort(component->handle, component->outputPortIndex);
 
-    portDefinition->format.image.nFrameWidth = nFrameWidth;
-    portDefinition->format.image.nFrameHeight = nFrameHeight;
-    portDefinition->format.image.nSliceHeight = 0;
+    portDefinition->format.image.nFrameWidth = frameSize.nWidth;
+    portDefinition->format.image.nFrameHeight = frameSize.nHeight;
+    portDefinition->format.image.nSliceHeight = (brcmSupportsSlices->bEnabled == OMX_TRUE) ? 16 : frameSize.nHeight;
     portDefinition->format.image.nStride = 0;
     portDefinition->format.image.bFlagErrorConcealment = OMX_FALSE;
     portDefinition->format.image.eCompressionFormat = OMX_IMAGE_CodingUnused;
     portDefinition->format.image.eColorFormat = eColorFormat;
-//    portDefinition->nBufferSize = nFrameWidth * nSliceHeight * nChannels;
     omxErr = OMX_SetParameter(component->handle, OMX_IndexParamPortDefinition, portDefinition);
     omxAssert(omxErr);
 
@@ -257,12 +291,9 @@ static void omxFreeBuffers(OMXResize_s *component) {
 
 
 void omxResize() {
-    OMX_S32 sliceHeight = 16;
-
     uint32_t rawImageWidth = 1440;
     uint32_t rawImageHeight = 1200;
     uint8_t rawImageChannels = 4;
-    uint32_t sliceSize = rawImageWidth * sliceHeight * rawImageChannels;
     size_t rawImageSize = rawImageWidth * rawImageHeight * rawImageChannels;
     uint8_t *rawImage = (uint8_t *)malloc(rawImageSize);
 
@@ -272,9 +303,14 @@ void omxResize() {
             rawImage[index + 0] = x % 256;
             rawImage[index + 1] = y % 256;
             rawImage[index + 2] = (x + y) % 256;
-            rawImage[index + 3] = (x + y) % 256;
+            rawImage[index + 3] = 255;
         }
     }
+
+    OMXSize_t inputFrameSize = { .nWidth = rawImageWidth, .nHeight = rawImageHeight };
+    //OMXRect_t inputFrameCrop = { .nWidth = 256, .nHeight = 256, .nLeft = 128, .nTop = 128 };
+    OMXRect_t inputFrameCrop = { .nWidth = 0, .nHeight = 0, .nLeft = 0, .nTop = 0 };
+    OMXSize_t outputFrameSize = { .nWidth = 1024, .nHeight = 1024 };
 
 
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
@@ -301,18 +337,15 @@ void omxResize() {
     omxEnablePort(ctx.resize.handle, ctx.resize.inputPortIndex, OMX_FALSE);
     omxEnablePort(ctx.resize.handle, ctx.resize.outputPortIndex, OMX_FALSE);
     omxSwitchToState(ctx.resize.handle, OMX_StateIdle);
-    omxSetupInputPort(&ctx.resize, rawImageWidth, rawImageHeight, sliceHeight, rawImageChannels, OMX_COLOR_Format32bitABGR8888);
-    omxSetupOutputPort(&ctx.resize, 720, 600, OMX_COLOR_Format32bitABGR8888);
+    omxSetupInputPort(&ctx.resize, inputFrameSize, inputFrameCrop, OMX_COLOR_Format32bitABGR8888);
+    omxSetupOutputPort(&ctx.resize, outputFrameSize, OMX_COLOR_Format32bitABGR8888);
     omxSwitchToState(ctx.resize.handle, OMX_StateExecuting);
 
-    //printf("%dx%d\n", ctx.resize.inputPortDefinition.format.image.nFrameWidth, ctx.resize.inputPortDefinition.format.image.nFrameHeight);
 
     int pos = 0;
     ctx.resize.inputReady = true;
     ctx.resize.outputReady = false;
-    sliceHeight = 1200;
-    sliceSize = rawImageWidth * sliceHeight * rawImageChannels;
-    uint8_t *dummyBuffer = malloc(rawImageSize);
+    uint32_t sliceSize = ctx.resize.inputBuffer->nAllocLen;
 
     omxErr = OMX_FillThisBuffer(ctx.resize.handle, ctx.resize.outputBuffer);
     omxAssert(omxErr);
