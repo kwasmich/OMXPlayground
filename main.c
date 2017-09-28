@@ -21,6 +21,7 @@
 #include "omxJPEGDec.h"
 #include "omxJPEGEnc.h"
 #include "omxResize.h"
+#include "omxTunnel.h"
 
 
 
@@ -53,7 +54,8 @@ int main(int argc, const char * argv[]) {
     //omxImageRead();
     //omxJPEGDec();
     //omxJPEGEnc();
-    omxResize();
+    //omxResize();
+    omxTunnel();
 
     return 0;
 }

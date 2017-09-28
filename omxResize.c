@@ -152,7 +152,7 @@ static OMX_ERRORTYPE omxFillBufferDone(
 
 
 
-static void omxGetPorts(OMXResize_s *component) {
+static void getPorts(OMXResize_s *component) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_PORT_PARAM_TYPE ports;
     OMX_INIT_STRUCTURE(ports);
@@ -181,7 +181,7 @@ static void omxGetPorts(OMXResize_s *component) {
 
 
 
-static void omxSetupInputPort(OMXResize_s *component, OMXSize_t frameSize, OMXRect_t cropRect, OMX_COLOR_FORMATTYPE eColorFormat) {
+static void setupInputPort(OMXResize_s *component, OMXSize_t frameSize, OMXRect_t cropRect, OMX_COLOR_FORMATTYPE eColorFormat) {
     assert(omxAssertImagePortFormatSupported(component->handle, component->inputPortIndex, eColorFormat));
 
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
@@ -239,7 +239,7 @@ static void omxSetupInputPort(OMXResize_s *component, OMXSize_t frameSize, OMXRe
 
 
 
-static void omxSetupOutputPort(OMXResize_s *component, OMXSize_t frameSize, OMX_COLOR_FORMATTYPE eColorFormat) {
+static void setupOutputPort(OMXResize_s *component, OMXSize_t frameSize, OMX_COLOR_FORMATTYPE eColorFormat) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_CONFIG_PORTBOOLEANTYPE *brcmSupportsSlices = &component->outputBrcmSupportsSlices;
     OMX_INIT_STRUCTURE2(brcmSupportsSlices);
@@ -280,7 +280,7 @@ static void omxSetupOutputPort(OMXResize_s *component, OMXSize_t frameSize, OMX_
 
 
 
-static void omxFreeBuffers(OMXResize_s *component) {
+static void freeBuffers(OMXResize_s *component) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     omxErr = OMX_FreeBuffer(component->handle, component->inputPortIndex, component->inputBuffer);
     omxAssert(omxErr);
@@ -333,12 +333,12 @@ void omxResize() {
     omxAssertState(ctx.resize.handle, OMX_StateLoaded);
 
 
-    omxGetPorts(&ctx.resize);
+    getPorts(&ctx.resize);
     omxEnablePort(ctx.resize.handle, ctx.resize.inputPortIndex, OMX_FALSE);
     omxEnablePort(ctx.resize.handle, ctx.resize.outputPortIndex, OMX_FALSE);
     omxSwitchToState(ctx.resize.handle, OMX_StateIdle);
-    omxSetupInputPort(&ctx.resize, inputFrameSize, inputFrameCrop, OMX_COLOR_Format32bitABGR8888);
-    omxSetupOutputPort(&ctx.resize, outputFrameSize, OMX_COLOR_Format32bitABGR8888);
+    setupInputPort(&ctx.resize, inputFrameSize, inputFrameCrop, OMX_COLOR_Format32bitABGR8888);
+    setupOutputPort(&ctx.resize, outputFrameSize, OMX_COLOR_Format32bitABGR8888);
     omxSwitchToState(ctx.resize.handle, OMX_StateExecuting);
 
 
@@ -396,9 +396,8 @@ void omxResize() {
     omxSwitchToState(ctx.resize.handle, OMX_StateIdle);
     omxEnablePort(ctx.resize.handle, ctx.resize.inputPortIndex, OMX_FALSE);
     omxEnablePort(ctx.resize.handle, ctx.resize.outputPortIndex, OMX_FALSE);
-    omxFreeBuffers(&ctx.resize);
+    freeBuffers(&ctx.resize);
     omxSwitchToState(ctx.resize.handle, OMX_StateLoaded);
-
     omxErr = OMX_FreeHandle(ctx.resize.handle);
     omxAssert(omxErr);
 };
