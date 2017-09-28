@@ -542,6 +542,8 @@ void omxTunnel() {
 
     FILE * output = fopen("out.data", "wb");
 
+    bool once = true;
+
     while (true) {
         if (ctx.resize.outputReady) {
             ctx.resize.outputReady = false;
@@ -588,13 +590,15 @@ void omxTunnel() {
             omxErr = OMX_EmptyThisBuffer(ctx.imageDecode.handle, inBuffer);
             omxAssert(omxErr);
 
-            if (!ctx.resize.outputBuffer) {
+            if (once) {
+                once = false;
                 puts("wait for port change...");
                 vcos_semaphore_wait(&ctx.portChangeLock);
                 puts("continuing...");
 
-                setupImageDecodeOutputPort(&ctx.imageDecode);
                 setupResizeInputPort(&ctx.resize, inputFrameSize, inputFrameCrop, OMX_COLOR_Format32bitABGR8888);
+                setupImageDecodeOutputPort(&ctx.imageDecode);
+                puts("########################");
 
                 puts("OMX_FillThisBuffer");
                 omxErr = OMX_FillThisBuffer(ctx.resize.handle, ctx.resize.outputBuffer);
