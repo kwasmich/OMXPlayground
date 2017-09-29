@@ -187,6 +187,17 @@ static OMX_ERRORTYPE omxFillBufferDone(
 
 
 
+static OMX_ERRORTYPE omxNOP(
+                            OMX_IN OMX_HANDLETYPE hComponent,
+                            OMX_IN OMX_PTR pAppData,
+                            OMX_IN OMX_BUFFERHEADERTYPE* pBuffer
+                            ) {
+    return OMX_ErrorNone;
+}
+
+
+
+
 static void getImageDecodePorts(OMXImageDecode_s *component) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_PORT_PARAM_TYPE ports;
@@ -253,16 +264,20 @@ static void setupImageDecodeInputPort(OMXImageDecode_s *component, OMX_IMAGE_COD
     omxErr = OMX_GetParameter(component->handle, OMX_IndexParamPortDefinition, &portDefinition);
     omxAssert(omxErr);
 
-    //omxPrintPort(ctx->handle, ctx->inputPortIndex);
+//    omxPrintPort(component->handle, component->inputPortIndex);
 
     OMX_IMAGE_PARAM_PORTFORMATTYPE imagePortFormat;
     OMX_INIT_STRUCTURE(imagePortFormat);
     imagePortFormat.nPortIndex = component->inputPortIndex;
+    omxErr = OMX_GetParameter(component->handle, OMX_IndexParamImagePortFormat, &imagePortFormat);
+    omxAssert(omxErr);
     imagePortFormat.eCompressionFormat = format;
     omxErr = OMX_SetParameter(component->handle, OMX_IndexParamImagePortFormat, &imagePortFormat);
     omxAssert(omxErr);
 
     omxEnablePort(component->handle, component->inputPortIndex, OMX_TRUE);
+
+//    omxPrintPort(component->handle, component->inputPortIndex);
 
     for (int i = 0; i < portDefinition.nBufferCountActual; i++) {
         omxErr = OMX_AllocateBuffer(component->handle, &component->inputBuffer[i], component->inputPortIndex, i, portDefinition.nBufferSize);
@@ -303,9 +318,9 @@ static void setupImageDecodeOutputPort(OMXImageDecode_s *component) {
     assert(numAvailableStreams.nU32 > 0);
 
     printf("%d x %d\n", portDefinition.format.image.nFrameWidth, portDefinition.format.image.nFrameHeight);
-    omxPrintPort(component->handle, component->outputPortIndex);
+    //omxPrintPort(component->handle, component->outputPortIndex);
 
-    omxEnablePort(component->handle, component->outputPortIndex, OMX_TRUE);
+//    omxEnablePort(component->handle, component->outputPortIndex, OMX_TRUE);
 
 //    omxErr = OMX_AllocateBuffer(component->handle, &component->outputBuffer, component->outputPortIndex, NULL, portDefinition.nBufferSize);
 //    omxAssert(omxErr);
@@ -361,7 +376,7 @@ static void setupResizeInputPort(OMXResize_s *component, OMXSize_t frameSize, OM
 
     omxEnablePort(component->handle, component->inputPortIndex, OMX_TRUE);
 
-    omxPrintPort(component->handle, component->inputPortIndex);
+    //omxPrintPort(component->handle, component->inputPortIndex);
     printf("pos: %dx%d    dim: %dx%d\n", commonInputCrop->nLeft, commonInputCrop->nTop, commonInputCrop->nWidth, commonInputCrop->nHeight);
 
 //
@@ -456,8 +471,8 @@ void omxTunnel() {
 
     OMXSize_t inputFrameSize = { .nWidth = rawImageWidth, .nHeight = rawImageHeight };
     //OMXRect_t inputFrameCrop = { .nWidth = 256, .nHeight = 256, .nLeft = 128, .nTop = 128 };
-    OMXRect_t inputFrameCrop = { .nWidth = 0, .nHeight = 0, .nLeft = 0, .nTop = 0 };
-    OMXSize_t outputFrameSize = { .nWidth = 256, .nHeight = 256 };
+    OMXRect_t inputFrameCrop = { .nWidth = 500, .nHeight = 500, .nLeft = 200, .nTop = 200 };
+    OMXSize_t outputFrameSize = { .nWidth = 2048, .nHeight = 1440 };
 
 
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
@@ -479,40 +494,19 @@ void omxTunnel() {
     vcosErr = vcos_semaphore_create(&ctx.portChangeLock, "portChangeLock", 1);
     assert(vcosErr == VCOS_SUCCESS);
 
-    OMX_CALLBACKTYPE omxCallbacks;
-    omxCallbacks.EventHandler = omxEventHandler;
-    omxCallbacks.EmptyBufferDone = omxEmptyBufferDone;
-    omxCallbacks.FillBufferDone = omxFillBufferDone;
 
     {
         OMX_STRING omxComponentName = "OMX.broadcom.image_decode";
+        OMX_CALLBACKTYPE omxCallbacks;
+        omxCallbacks.EventHandler = omxEventHandler;
+        omxCallbacks.EmptyBufferDone = omxEmptyBufferDone;
+        omxCallbacks.FillBufferDone = omxNOP;
         omxErr = OMX_GetHandle(&ctx.imageDecode.handle, omxComponentName, &ctx, &omxCallbacks);
         omxAssert(omxErr);
         omxAssertState(ctx.imageDecode.handle, OMX_StateLoaded);
         getImageDecodePorts(&ctx.imageDecode);
         omxEnablePort(ctx.imageDecode.handle, ctx.imageDecode.inputPortIndex, OMX_FALSE);
         omxEnablePort(ctx.imageDecode.handle, ctx.imageDecode.outputPortIndex, OMX_FALSE);
-    }
-
-    {
-        OMX_STRING omxComponentName = "OMX.broadcom.resize";
-        omxErr = OMX_GetHandle(&ctx.resize.handle, omxComponentName, &ctx, &omxCallbacks);
-        omxAssert(omxErr);
-        omxAssertState(ctx.resize.handle, OMX_StateLoaded);
-        getResizePorts(&ctx.resize);
-        omxEnablePort(ctx.resize.handle, ctx.resize.inputPortIndex, OMX_FALSE);
-        omxEnablePort(ctx.resize.handle, ctx.resize.outputPortIndex, OMX_FALSE);
-    }
-
-    omxErr = OMX_SetupTunnel(
-                             ctx.imageDecode.handle,
-                             ctx.imageDecode.outputPortIndex,
-                             ctx.resize.handle,
-                             ctx.resize.inputPortIndex
-                             );
-    omxAssert(omxErr);
-
-    {
         omxSwitchToState(ctx.imageDecode.handle, OMX_StateIdle);
         setupImageDecodeInputPort(&ctx.imageDecode, OMX_IMAGE_CodingJPEG);
         prepareImageDecodeOutputPort(&ctx.imageDecode);
@@ -520,18 +514,20 @@ void omxTunnel() {
     }
 
     {
+        OMX_STRING omxComponentName = "OMX.broadcom.resize";
+        OMX_CALLBACKTYPE omxCallbacks;
+        omxCallbacks.EventHandler = omxEventHandler;
+        omxCallbacks.EmptyBufferDone = omxNOP;
+        omxCallbacks.FillBufferDone = omxFillBufferDone;
+        omxErr = OMX_GetHandle(&ctx.resize.handle, omxComponentName, &ctx, &omxCallbacks);
+        omxAssert(omxErr);
+        omxAssertState(ctx.resize.handle, OMX_StateLoaded);
+        getResizePorts(&ctx.resize);
+        omxEnablePort(ctx.resize.handle, ctx.resize.inputPortIndex, OMX_FALSE);
+        omxEnablePort(ctx.resize.handle, ctx.resize.outputPortIndex, OMX_FALSE);
         omxSwitchToState(ctx.resize.handle, OMX_StateIdle);
-        //setupResizeInputPort(&ctx.resize, inputFrameSize, inputFrameCrop, OMX_COLOR_Format32bitABGR8888);
         setupResizeOutputPort(&ctx.resize, outputFrameSize, OMX_COLOR_Format32bitABGR8888);
-        omxSwitchToState(ctx.resize.handle, OMX_StateExecuting);
     }
-
-
-
-
-
-
-
 
 
     uint8_t *jpegDataPtr = jpegData;
@@ -583,7 +579,7 @@ void omxTunnel() {
 
             if (jpegDataRemaining <= 0) {
                 puts("signaling OMX_BUFFERFLAG_EOS");
-                inBuffer->nFlags = OMX_BUFFERFLAG_EOS;
+                inBuffer->nFlags = OMX_BUFFERFLAG_EOS | OMX_BUFFERFLAG_ENDOFFRAME;
             }
 
             puts("OMX_EmptyThisBuffer");
@@ -596,13 +592,33 @@ void omxTunnel() {
                 vcos_semaphore_wait(&ctx.portChangeLock);
                 puts("continuing...");
 
+                //omxEnablePort(ctx.imageDecode.handle, ctx.imageDecode.outputPortIndex, OMX_FALSE);
+                //omxEnablePort(ctx.resize.handle, ctx.resize.inputPortIndex, OMX_FALSE);
+
+                omxErr = OMX_SetupTunnel(
+                                         ctx.imageDecode.handle,
+                                         ctx.imageDecode.outputPortIndex,
+                                         ctx.resize.handle,
+                                         ctx.resize.inputPortIndex
+                                         );
+                omxAssert(omxErr);
+
+
+                omxEnablePort(ctx.imageDecode.handle, ctx.imageDecode.outputPortIndex, OMX_TRUE);
                 setupResizeInputPort(&ctx.resize, inputFrameSize, inputFrameCrop, OMX_COLOR_Format32bitABGR8888);
-                setupImageDecodeOutputPort(&ctx.imageDecode);
-                puts("########################");
+                omxSwitchToState(ctx.resize.handle, OMX_StateExecuting);
+
+
+                omxPrintPort(ctx.imageDecode.handle, ctx.imageDecode.inputPortIndex);
+                omxPrintPort(ctx.imageDecode.handle, ctx.imageDecode.outputPortIndex);
+                omxPrintPort(ctx.resize.handle, ctx.resize.inputPortIndex);
+                omxPrintPort(ctx.resize.handle, ctx.resize.outputPortIndex);
 
                 puts("OMX_FillThisBuffer");
                 omxErr = OMX_FillThisBuffer(ctx.resize.handle, ctx.resize.outputBuffer);
                 omxAssert(omxErr);
+
+
             }
         }
     }
@@ -612,25 +628,18 @@ void omxTunnel() {
 
 
 
-
-
-
-
-
-
-
-
     omxSwitchToState(ctx.imageDecode.handle, OMX_StateIdle);
+    omxSwitchToState(ctx.resize.handle, OMX_StateIdle);
     omxEnablePort(ctx.imageDecode.handle, ctx.imageDecode.inputPortIndex, OMX_FALSE);
-    //omxEnablePort(ctx.imageDecode.handle, ctx.imageDecode.outputPortIndex, OMX_FALSE);
+    omxEnablePort(ctx.imageDecode.handle, ctx.imageDecode.outputPortIndex, OMX_FALSE);
+    omxEnablePort(ctx.resize.handle, ctx.resize.inputPortIndex, OMX_FALSE);
+    omxEnablePort(ctx.resize.handle, ctx.resize.outputPortIndex, OMX_FALSE);
+
     freeImageDecodeBuffers(&ctx.imageDecode);
     omxSwitchToState(ctx.imageDecode.handle, OMX_StateLoaded);
     omxErr = OMX_FreeHandle(ctx.imageDecode.handle);
     omxAssert(omxErr);
 
-    omxSwitchToState(ctx.resize.handle, OMX_StateIdle);
-    //omxEnablePort(ctx.resize.handle, ctx.resize.inputPortIndex, OMX_FALSE);
-    omxEnablePort(ctx.resize.handle, ctx.resize.outputPortIndex, OMX_FALSE);
     freeResizeBuffers(&ctx.resize);
     omxSwitchToState(ctx.resize.handle, OMX_StateLoaded);
     omxErr = OMX_FreeHandle(ctx.resize.handle);
