@@ -50,12 +50,12 @@ int main(int argc, const char * argv[]) {
     omxErr = OMX_Init();
     omxAssert(omxErr);
 
-    //omxDump();
+    //omxDump(13);
     //omxImageRead();
     //omxJPEGDec();
-    //omxJPEGEnc();
+    omxJPEGEnc();
     //omxResize();
-    omxTunnel();
+    //omxTunnel();
 
     return 0;
 }

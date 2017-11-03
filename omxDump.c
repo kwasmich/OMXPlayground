@@ -213,7 +213,7 @@ static OMX_ERRORTYPE omxFillBufferDone(
 
 
 
-void omxDump() {
+void omxDump(OMX_U32 componentIndex) {
     char stringBackingStore[256];
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_STATETYPE omxState = OMX_StateInvalid;
@@ -223,7 +223,7 @@ void omxDump() {
 
 
     OMX_STRING omxComponentName = stringBackingStore;
-    omxErr = OMX_ComponentNameEnum(omxComponentName, 256, 17);
+    omxErr = OMX_ComponentNameEnum(omxComponentName, 256, componentIndex);
     omxAssert(omxErr);
 
     puts(COLOR_GREEN "*************************************************************" COLOR_NC);

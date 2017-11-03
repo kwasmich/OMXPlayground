@@ -27,14 +27,25 @@
 
 typedef struct {
     OMX_HANDLETYPE handle;
-    OMX_BUFFERHEADERTYPE* inputBuffer;
-    OMX_BUFFERHEADERTYPE* outputBuffer;
-    VCOS_SEMAPHORE_T handler_lock;
+
     OMX_U32 inputPortIndex;
-    OMX_U32 outputPortIndex;
+    OMX_BUFFERHEADERTYPE* inputBuffer;
     bool inputReady;
+
+    OMX_BUFFERHEADERTYPE* outputBuffer;
+    OMX_U32 outputPortIndex;
     bool outputReady;
-} ComponentContext;
+} OMXImageEncode_s;
+
+
+
+typedef struct {
+    OMXImageEncode_s imageEncode;
+
+    VCOS_SEMAPHORE_T handler_lock;
+    VCOS_SEMAPHORE_T portChangeLock;
+} OMXContext_s;
+
 
 
 
@@ -48,7 +59,7 @@ static OMX_ERRORTYPE omxEventHandler(
 
     printf("eEvent: %s,  ", omxEventTypeEnum(eEvent));
     //printf("eEvent: %s,  nData1: %x,  nData2: %x\n", omxEventTypeEnum(eEvent), nData1, nData2);
-    ComponentContext* ctx = (ComponentContext*)pAppData;
+    OMXContext_s* ctx = (OMXContext_s*)pAppData;
 
     switch(eEvent) {
         case OMX_EventCmdComplete:
@@ -93,9 +104,9 @@ static OMX_ERRORTYPE omxEmptyBufferDone(
                                         OMX_IN OMX_HANDLETYPE hComponent,
                                         OMX_IN OMX_PTR pAppData,
                                         OMX_IN OMX_BUFFERHEADERTYPE* pBuffer) {
-    ComponentContext *ctx = (ComponentContext*)pAppData;
+    OMXContext_s *ctx = (OMXContext_s*)pAppData;
     vcos_semaphore_wait(&ctx->handler_lock);
-    ctx->inputReady = true;
+    ctx->imageEncode.inputReady = true;
     vcos_semaphore_post(&ctx->handler_lock);
     return OMX_ErrorNone;
 }
@@ -106,20 +117,20 @@ static OMX_ERRORTYPE omxFillBufferDone(
                                        OMX_OUT OMX_HANDLETYPE hComponent,
                                        OMX_OUT OMX_PTR pAppData,
                                        OMX_OUT OMX_BUFFERHEADERTYPE* pBuffer) {
-    ComponentContext *ctx = (ComponentContext*)pAppData;
+    OMXContext_s *ctx = (OMXContext_s*)pAppData;
     vcos_semaphore_wait(&ctx->handler_lock);
-    ctx->outputReady = true;
+    ctx->imageEncode.outputReady = true;
     vcos_semaphore_post(&ctx->handler_lock);
     return OMX_ErrorNone;
 }
 
 
 
-static void omxGetPorts(ComponentContext *ctx) {
+static void getImageEncodePorts(OMXImageEncode_s *component) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_PORT_PARAM_TYPE ports;
     OMX_INIT_STRUCTURE(ports);
-    omxErr = OMX_GetParameter(ctx->handle, OMX_IndexParamImageInit, &ports);
+    omxErr = OMX_GetParameter(component->handle, OMX_IndexParamImageInit, &ports);
     omxAssert(omxErr);
     const OMX_U32 pEnd = ports.nStartPortNumber + ports.nPorts;
 
@@ -127,88 +138,88 @@ static void omxGetPorts(ComponentContext *ctx) {
         OMX_PARAM_PORTDEFINITIONTYPE portDefinition;
         OMX_INIT_STRUCTURE(portDefinition);
         portDefinition.nPortIndex = p;
-        omxErr = OMX_GetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
+        omxErr = OMX_GetParameter(component->handle, OMX_IndexParamPortDefinition, &portDefinition);
         omxAssert(omxErr);
 
         if (portDefinition.eDir == OMX_DirInput) {
-            assert(ctx->inputPortIndex == 0);
-            ctx->inputPortIndex = p;
+            assert(component->inputPortIndex == 0);
+            component->inputPortIndex = p;
         }
 
         if (portDefinition.eDir == OMX_DirOutput) {
-            assert(ctx->outputPortIndex == 0);
-            ctx->outputPortIndex = p;
+            assert(component->outputPortIndex == 0);
+            component->outputPortIndex = p;
         }
     }
 }
 
 
 
-static void omxSetupInputPort(ComponentContext *ctx, OMX_U32 nFrameWidth, OMX_U32 nFrameHeight, OMX_U32 nSliceHeight, OMX_U32 nChannels, OMX_COLOR_FORMATTYPE eColorFormat) {
+static void setupImageEncodeInputPort(OMXImageEncode_s *component, OMX_U32 nFrameWidth, OMX_U32 nFrameHeight, OMX_U32 nSliceHeight, OMX_U32 nChannels, OMX_COLOR_FORMATTYPE eColorFormat) {
+    assert((nSliceHeight == 16) || (nSliceHeight == nFrameHeight));
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_PARAM_PORTDEFINITIONTYPE portDefinition;
     OMX_INIT_STRUCTURE(portDefinition);
-    portDefinition.nPortIndex = ctx->inputPortIndex;
-    omxErr = OMX_GetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
+    portDefinition.nPortIndex = component->inputPortIndex;
+    omxErr = OMX_GetParameter(component->handle, OMX_IndexParamPortDefinition, &portDefinition);
     omxAssert(omxErr);
-
     portDefinition.format.image.nFrameWidth = nFrameWidth;
     portDefinition.format.image.nFrameHeight = nFrameHeight;
-    portDefinition.format.image.nSliceHeight = nSliceHeight;
+    portDefinition.format.image.nSliceHeight = nSliceHeight; // 16 | nFrameHeight
     portDefinition.format.image.nStride = 0;
     portDefinition.format.image.bFlagErrorConcealment = OMX_FALSE;
     portDefinition.format.image.eCompressionFormat = OMX_IMAGE_CodingUnused;
     portDefinition.format.image.eColorFormat = eColorFormat;
-    portDefinition.nBufferSize = nFrameWidth * nSliceHeight * nChannels;
-    omxErr = OMX_SetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
+    omxErr = OMX_SetParameter(component->handle, OMX_IndexParamPortDefinition, &portDefinition);
+    omxAssert(omxErr);
+    omxErr = OMX_GetParameter(component->handle, OMX_IndexParamPortDefinition, &portDefinition);
     omxAssert(omxErr);
 
+    printf("%d %d %d (%d)\n", nFrameWidth, nSliceHeight, nFrameWidth * nSliceHeight * nChannels, portDefinition.nBufferSize);
 
-    omxEnablePort(ctx->handle, ctx->inputPortIndex, OMX_TRUE);
+    omxEnablePort(component->handle, component->inputPortIndex, OMX_TRUE);
 
-
-    omxErr = OMX_AllocateBuffer(ctx->handle, &ctx->inputBuffer, ctx->inputPortIndex, NULL, portDefinition.nBufferSize);
+    omxErr = OMX_AllocateBuffer(component->handle, &component->inputBuffer, component->inputPortIndex, NULL, portDefinition.nBufferSize);
     omxAssert(omxErr);
 }
 
 
 
-static void omxSetupOutputPort(ComponentContext *ctx, OMX_U32 nQFactor) {
+static void setupImageEncodeOutputPort(OMXImageEncode_s *component, OMX_U32 nQFactor) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_PARAM_PORTDEFINITIONTYPE portDefinition;
     OMX_INIT_STRUCTURE(portDefinition);
-    portDefinition.nPortIndex = ctx->outputPortIndex;
-    omxErr = OMX_GetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
+    portDefinition.nPortIndex = component->outputPortIndex;
+    omxErr = OMX_GetParameter(component->handle, OMX_IndexParamPortDefinition, &portDefinition);
     omxAssert(omxErr);
-
     portDefinition.format.image.bFlagErrorConcealment = OMX_FALSE;
     portDefinition.format.image.eCompressionFormat = OMX_IMAGE_CodingJPEG;
     portDefinition.format.image.eColorFormat = OMX_COLOR_FormatYUV420PackedPlanar;
-    omxErr = OMX_SetParameter(ctx->handle, OMX_IndexParamPortDefinition, &portDefinition);
+    omxErr = OMX_SetParameter(component->handle, OMX_IndexParamPortDefinition, &portDefinition);
+    omxAssert(omxErr);
+    omxErr = OMX_GetParameter(component->handle, OMX_IndexParamPortDefinition, &portDefinition);
     omxAssert(omxErr);
 
     OMX_IMAGE_PARAM_QFACTORTYPE qFactor;
     OMX_INIT_STRUCTURE(qFactor);
-    qFactor.nPortIndex = ctx->outputPortIndex;
+    qFactor.nPortIndex = component->outputPortIndex;
     qFactor.nQFactor = nQFactor;
-    omxErr = OMX_SetParameter(ctx->handle, OMX_IndexParamQFactor, &qFactor);
+    omxErr = OMX_SetParameter(component->handle, OMX_IndexParamQFactor, &qFactor);
     omxAssert(omxErr);
 
+    omxEnablePort(component->handle, component->outputPortIndex, OMX_TRUE);
 
-    omxEnablePort(ctx->handle, ctx->outputPortIndex, OMX_TRUE);
-
-
-    omxErr = OMX_AllocateBuffer(ctx->handle, &ctx->outputBuffer, ctx->outputPortIndex, NULL, portDefinition.nBufferSize);
+    omxErr = OMX_AllocateBuffer(component->handle, &component->outputBuffer, component->outputPortIndex, NULL, portDefinition.nBufferSize);
     omxAssert(omxErr);
 }
 
 
 
-static void omxFreeBuffers(ComponentContext *ctx) {
+static void freeImageEncodeBuffers(OMXImageEncode_s *component) {
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
-    omxErr = OMX_FreeBuffer(ctx->handle, ctx->inputPortIndex, ctx->inputBuffer);
+    omxErr = OMX_FreeBuffer(component->handle, component->inputPortIndex, component->inputBuffer);
     omxAssert(omxErr);
-    omxErr = OMX_FreeBuffer(ctx->handle, ctx->outputPortIndex, ctx->outputBuffer);
+    omxErr = OMX_FreeBuffer(component->handle, component->outputPortIndex, component->outputBuffer);
     omxAssert(omxErr);
 }
 
@@ -216,12 +227,11 @@ static void omxFreeBuffers(ComponentContext *ctx) {
 
 void omxJPEGEnc() {
     OMX_U32 outputQuality = 7;      // [1, 100] as in libJPEG 9
-    OMX_S32 sliceHeight = 128;
+    OMX_S32 sliceHeight = 16; // 16 | rawImageHeight
 
     uint32_t rawImageWidth = 1440;
     uint32_t rawImageHeight = 1200;
     uint8_t rawImageChannels = 3;
-    uint32_t sliceSize = rawImageWidth * sliceHeight * rawImageChannels;
     size_t rawImageSize = rawImageWidth * rawImageHeight * rawImageChannels;
     uint8_t *rawImage = (uint8_t *)malloc(rawImageSize);
 
@@ -239,7 +249,7 @@ void omxJPEGEnc() {
     OMX_STATETYPE omxState = OMX_StateInvalid;
     VCOS_STATUS_T vcosErr = VCOS_SUCCESS;
 
-    ComponentContext ctx;
+    OMXContext_s ctx;
     memset(&ctx, 0, sizeof(ctx));
 
     vcosErr = vcos_semaphore_create(&ctx.handler_lock, "handler_lock", 1);
@@ -250,59 +260,60 @@ void omxJPEGEnc() {
     omxCallbacks.EventHandler = omxEventHandler;
     omxCallbacks.EmptyBufferDone = omxEmptyBufferDone;
     omxCallbacks.FillBufferDone = omxFillBufferDone;
-    omxErr = OMX_GetHandle(&ctx.handle, omxComponentName, &ctx, &omxCallbacks);
+    omxErr = OMX_GetHandle(&ctx.imageEncode.handle, omxComponentName, &ctx, &omxCallbacks);
     omxAssert(omxErr);
-    omxAssertState(ctx.handle, OMX_StateLoaded);
+    omxAssertState(ctx.imageEncode.handle, OMX_StateLoaded);
 
 
-    omxGetPorts(&ctx);
-    omxEnablePort(ctx.handle, ctx.inputPortIndex, OMX_FALSE);
-    omxEnablePort(ctx.handle, ctx.outputPortIndex, OMX_FALSE);
-    omxSwitchToState(ctx.handle, OMX_StateIdle);
-    omxSetupInputPort(&ctx, rawImageWidth, rawImageHeight, sliceHeight, rawImageChannels, OMX_COLOR_Format24bitBGR888);
-    omxSetupOutputPort(&ctx, outputQuality);
-    omxSwitchToState(ctx.handle, OMX_StateExecuting);
+    getImageEncodePorts(&ctx.imageEncode);
+    omxEnablePort(ctx.imageEncode.handle, ctx.imageEncode.inputPortIndex, OMX_FALSE);
+    omxEnablePort(ctx.imageEncode.handle, ctx.imageEncode.outputPortIndex, OMX_FALSE);
+    omxSwitchToState(ctx.imageEncode.handle, OMX_StateIdle);
+    setupImageEncodeInputPort(&ctx.imageEncode, rawImageWidth, rawImageHeight, sliceHeight, rawImageChannels, OMX_COLOR_Format24bitBGR888);
+    setupImageEncodeOutputPort(&ctx.imageEncode, outputQuality);
+    omxSwitchToState(ctx.imageEncode.handle, OMX_StateExecuting);
 
 
     int pos = 0;
-    ctx.inputReady = true;
-    ctx.outputReady = false;
+    uint32_t sliceSize = ctx.imageEncode.inputBuffer->nAllocLen;
+    ctx.imageEncode.inputReady = true;
+    ctx.imageEncode.outputReady = false;
 
-    omxErr = OMX_FillThisBuffer(ctx.handle, ctx.outputBuffer);
+    omxErr = OMX_FillThisBuffer(ctx.imageEncode.handle, ctx.imageEncode.outputBuffer);
     omxAssert(omxErr);
 
     FILE * output = fopen("out.jpg", "wb");
 
     while (true) {
-        if (ctx.outputReady) {
-            ctx.outputReady = false;
-            fwrite(ctx.outputBuffer->pBuffer + ctx.outputBuffer->nOffset, sizeof(uint8_t), ctx.outputBuffer->nFilledLen, output);
+        if (ctx.imageEncode.outputReady) {
+            ctx.imageEncode.outputReady = false;
+            fwrite(ctx.imageEncode.outputBuffer->pBuffer + ctx.imageEncode.outputBuffer->nOffset, sizeof(uint8_t), ctx.imageEncode.outputBuffer->nFilledLen, output);
 
-            if (ctx.outputBuffer->nFlags & OMX_BUFFERFLAG_ENDOFFRAME) {
+            if (ctx.imageEncode.outputBuffer->nFlags & OMX_BUFFERFLAG_ENDOFFRAME) {
                 break;
             }
 
-            omxErr = OMX_FillThisBuffer(ctx.handle, ctx.outputBuffer);
+            omxErr = OMX_FillThisBuffer(ctx.imageEncode.handle, ctx.imageEncode.outputBuffer);
             omxAssert(omxErr);
         }
 
-        if (ctx.inputReady) {
-            ctx.inputReady = false;
+        if (ctx.imageEncode.inputReady) {
+            ctx.imageEncode.inputReady = false;
 
             if (pos == rawImageSize) {
                 continue;
             }
 
-            memcpy(ctx.inputBuffer->pBuffer, &rawImage[pos], sliceSize);
-            ctx.inputBuffer->nOffset = 0;
-            ctx.inputBuffer->nFilledLen = sliceSize;
+            memcpy(ctx.imageEncode.inputBuffer->pBuffer, &rawImage[pos], sliceSize);
+            ctx.imageEncode.inputBuffer->nOffset = 0;
+            ctx.imageEncode.inputBuffer->nFilledLen = sliceSize;
             pos += sliceSize;
 
             if (pos + sliceSize > rawImageSize) {
                 sliceSize = rawImageSize - pos;
             }
 
-            omxErr = OMX_EmptyThisBuffer(ctx.handle, ctx.inputBuffer);
+            omxErr = OMX_EmptyThisBuffer(ctx.imageEncode.handle, ctx.imageEncode.inputBuffer);
             omxAssert(omxErr);
         }
     }
@@ -311,13 +322,13 @@ void omxJPEGEnc() {
     puts(COLOR_RED "done" COLOR_NC " blaub " COLOR_GREEN "yes" COLOR_NC);
 
 
-    omxSwitchToState(ctx.handle, OMX_StateIdle);
-    omxEnablePort(ctx.handle, ctx.inputPortIndex, OMX_FALSE);
-    omxEnablePort(ctx.handle, ctx.outputPortIndex, OMX_FALSE);
-    omxFreeBuffers(&ctx);
-    omxSwitchToState(ctx.handle, OMX_StateLoaded);
+    omxSwitchToState(ctx.imageEncode.handle, OMX_StateIdle);
+    omxEnablePort(ctx.imageEncode.handle, ctx.imageEncode.inputPortIndex, OMX_FALSE);
+    omxEnablePort(ctx.imageEncode.handle, ctx.imageEncode.outputPortIndex, OMX_FALSE);
+    freeImageEncodeBuffers(&ctx.imageEncode);
+    omxSwitchToState(ctx.imageEncode.handle, OMX_StateLoaded);
 
     
-    omxErr = OMX_FreeHandle(ctx.handle);
+    omxErr = OMX_FreeHandle(ctx.imageEncode.handle);
     omxAssert(omxErr);
 }

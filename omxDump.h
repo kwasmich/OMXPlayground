@@ -17,7 +17,7 @@
 
 void omxPrintPort(OMX_HANDLETYPE omxHandle, OMX_U32 portIndex);
 
-void omxDump(void);
+void omxDump(OMX_U32 componentIndex);
 
 
 #endif /* omxDump_h */
