@@ -19,6 +19,7 @@
 #include <interface/vcos/vcos.h>
 
 #include "cHelper.h"
+#include "mmapHelper.h"
 #include "omxHelper.h"
 
 
@@ -240,6 +241,8 @@ static void setupInputPort(OMXResize_s *component, OMXSize_t frameSize, OMXRect_
 
 
 static void setupOutputPort(OMXResize_s *component, OMXSize_t frameSize, OMX_COLOR_FORMATTYPE eColorFormat) {
+    assert(omxAssertImagePortFormatSupported(component->handle, component->outputPortIndex, eColorFormat));
+
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
     OMX_CONFIG_PORTBOOLEANTYPE *brcmSupportsSlices = &component->outputBrcmSupportsSlices;
     OMX_INIT_STRUCTURE2(brcmSupportsSlices);
@@ -291,8 +294,8 @@ static void freeBuffers(OMXResize_s *component) {
 
 
 void omxResize() {
-    uint32_t rawImageWidth = 1440;
-    uint32_t rawImageHeight = 1200;
+    uint32_t rawImageWidth = 640;
+    uint32_t rawImageHeight = 480;
     uint8_t rawImageChannels = 4;
     size_t rawImageSize = rawImageWidth * rawImageHeight * rawImageChannels;
     uint8_t *rawImage = (uint8_t *)malloc(rawImageSize);
@@ -310,7 +313,7 @@ void omxResize() {
     OMXSize_t inputFrameSize = { .nWidth = rawImageWidth, .nHeight = rawImageHeight };
     //OMXRect_t inputFrameCrop = { .nWidth = 256, .nHeight = 256, .nLeft = 128, .nTop = 128 };
     OMXRect_t inputFrameCrop = { .nWidth = 0, .nHeight = 0, .nLeft = 0, .nTop = 0 };
-    OMXSize_t outputFrameSize = { .nWidth = 1024, .nHeight = 1024 };
+    OMXSize_t outputFrameSize = { .nWidth = rawImageWidth, .nHeight = rawImageHeight };
 
 
     OMX_ERRORTYPE omxErr = OMX_ErrorNone;
